@@ -6,6 +6,12 @@ import threading
 import tkinter as tk
 from tkinter import messagebox
 from pynput.keyboard import Key, Listener
+import pytesseract
+from PIL import ImageGrab, ImageFilter
+import numpy as np
+
+# Tesseract Setup
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 # Configuration
 CONFIDENCE = 0.6  # Confidence level for image detection (0.0 to 1.0, higher = more exact match)
@@ -40,18 +46,30 @@ def run_app(stop_event):
             if windows:
                 game_window = windows[0]
                 print(f"Found game window: {game_window.title}")
-                
-                # Get current window position and size
-                current_x = game_window.left
-                current_y = game_window.top
-                current_width = game_window.width
-                current_height = game_window.height
-                
-                # Check if window needs repositioning or resizing
+
+                # Check if game window is active
                 if not game_window.isActive:
-                    print("Activating game window...")
-                    game_window.activate()
-                    time.sleep(0.2)  # Small delay after activation
+                    print("Game is not the active window. Alt+Tabbing to find it...")
+                    max_attempts = 10  # Maximum number of Alt+Tab attempts
+                    
+                    for attempt in range(max_attempts):
+                        # Press Alt+Tab
+                        pag.keyDown('alt')
+                        pag.press('tab')
+                        time.sleep(0.1)  # Small delay between tab presses
+                        
+                        # Check if we found the game window
+                        if game_window.isActive:
+                            pag.keyUp('alt')
+                            print("Successfully switched to game window")
+                            time.sleep(0.5)  # Let window settle
+                            break
+                    
+                    # Release alt key if we didn't find the window
+                    if not game_window.isActive:
+                        pag.keyUp('alt')
+                        print("Could not find game window after Alt+Tabbing")
+                        time.sleep(1.0)
                 
                 return game_window
             return None
@@ -59,56 +77,71 @@ def run_app(stop_event):
             print(f"Error finding game window: {str(e)}")
             return None
 
-    def check_and_click_button(image_path, button_name, confidence=0.9):
-        """Try to find and click a button in the game window."""
+    def check_and_click_text(text_to_find):
+        """Try to find and click text in the game window."""
         try:
-            print(f"Searching for '{button_name}' at: {image_path}")
-            print(f"Using confidence level: {confidence} (higher = more exact match)")
-            
-            if not os.path.exists(image_path):
-                print(f"ERROR: Image file not found: {image_path}")
+            # Get the game window position for screenshot
+            windows = pgw.getWindowsWithTitle(app)
+            if not windows:
+                print("Game window not found for screenshot")
                 return False
                 
-            try:
-                loc = pag.locateOnWindow(
-                    image_path, 
-                    app, 
-                    confidence=confidence, 
-                    grayscale=True
-                )
-                print(f"Image search completed with confidence={confidence}")
+            game_window = windows[0]
+            region = (
+                game_window.left,
+                game_window.top,
+                game_window.left + game_window.width,
+                game_window.top + game_window.height
+            )
+            
+            # Capture the game window
+            screenshot = ImageGrab.grab(bbox=region)
+            if text_to_find.lower() == "start":
+                screenshot = screenshot.convert('L')
+                crop_box = (600, 400, 1096, 559)
+                screenshot = screenshot.crop(crop_box)
+            screenshot = screenshot.filter(ImageFilter.MedianFilter(size=3))
+            screenshot.save(f"assets\img\{text_to_find}.png")
+            text = pytesseract.image_to_string(screenshot)
+            
+            if text_to_find.lower() in text.lower():
+                print(f"Found '{text_to_find}' on screen")
+                # Get OCR data with positions
+                data = pytesseract.image_to_data(screenshot, output_type=pytesseract.Output.DICT)
                 
-                if loc is not None:
-                    print(f"Match found for '{button_name}':")
-                    print(f"- Position: {loc}")
-                    print(f"- Confidence threshold met: {confidence}")
-                    
-                    # Click in the center of the detected region
-                    target_x = loc[0] + (loc[2] // 2)  # loc[2] is width
-                    target_y = loc[1] + (loc[3] // 2)  # loc[3] is height
-                    print(f"Moving mouse to center position: ({target_x}, {target_y})")
-                    print(f"Image dimensions: {loc[2]}x{loc[3]} pixels")
-                    pag.moveTo(target_x, target_y)
-                    pag.click()
-                    print(f"Successfully clicked '{button_name}' at center")
-                    return True
-                else:
-                    print(f"No match found for '{button_name}' with confidence={confidence}")
-                    print("Try adjusting the confidence level if the button exists but isn't being detected")
+                print("\nDetected text positions:")
+                found_position = False
+                
+                # Print all detected text for debugging
+                for i, word in enumerate(data['text']):
+                    if word.strip():  # Only print non-empty text
+                        print(f"Text: '{word}' at ({data['left'][i]}, {data['top'][i]})")
+                        
+                        # Look for any part of the text_to_find
+                        if any(part in word.lower() for part in text_to_find.lower().split()):
+                            # Calculate absolute screen position
+                            x = game_window.left + data['left'][i] + (data['width'][i] // 2)
+                            y = game_window.top + data['top'][i] + (data['height'][i] // 2)
+                            
+                            print(f"Moving to click button at ({x}, {y})")
+                            pag.moveTo(x, y)
+                            pag.click()
+                            time.sleep(0.5)  # Short delay after clicking
+                            found_position = True
+                            break
+                
+                if not found_position:
+                    print("Found text but couldn't determine click position")
                     return False
-                    
-            except Exception as e:
-                if "OpenCV" in str(e):
-                    print("OpenCV Error: Make sure opencv-python is installed correctly")
-                    print("Try running: pip install opencv-python")
-                raise e
+                return True
                 
+            print(f"'{text_to_find}' not found")
+            return False
+            
         except Exception as e:
-            print(f"Error while searching for '{button_name}':")
+            print(f"Error while searching for text '{text_to_find}':")
             print(f"- Error type: {type(e).__name__}")
             print(f"- Error message: {str(e)}")
-            print(f"- Image path: {image_path}")
-            print(f"- Confidence level: {confidence}")
             return False
 
     while not stop_event.is_set():
@@ -121,16 +154,16 @@ def run_app(stop_event):
                 time.sleep(1.0)
                 continue
                 
-            # First check for Challenge Again button
-            challenge_clicked = check_and_click_button(CHALLENGE_PATH, "Challenge Again", CONFIDENCE)
+            # First check for Challenge Again text
+            challenge_clicked = check_and_click_text("Challenge Again")
             if challenge_clicked:
-                print("Challenge Again button clicked, waiting before checking Start button...")
+                print("Challenge Again text clicked, waiting before checking Start...")
                 time.sleep(1.75)
                 
-                # Only check for Start button if Challenge Again was clicked
-                start_clicked = check_and_click_button(START_PATH, "Start", CONFIDENCE)
+                # Only check for Start text if Challenge Again was clicked
+                start_clicked = check_and_click_text("Start")
                 if start_clicked:
-                    print("Start button clicked, waiting for next cycle...")
+                    print("Start text clicked, waiting for next cycle...")
                     time.sleep(1.75)
                 
         except Exception as e:
