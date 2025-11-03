@@ -86,27 +86,73 @@ def run_app(stop_event):
                 
                 os.system("cls" if os.name == 'nt' else "clear")
                 print("App is running.")
+                sys.stdout.flush()
+                
+                print(f"Looking for Challenge Again button at: {CHALLENGE_PATH}")
+                print(f"File exists: {os.path.exists(CHALLENGE_PATH)}")
+                sys.stdout.flush()
+                
                 try:
+                    print("Attempting to locate Challenge Again button...")
+                    sys.stdout.flush()
                     loc_CA = pag.locateOnWindow(
                         CHALLENGE_PATH, app, confidence=0.9, grayscale=True
                     )
+                    print(f"Challenge Again location: {loc_CA}")
+                    sys.stdout.flush()
                     if loc_CA is not None:
+                        print(f"Clicking Challenge Again at {loc_CA[0] + 50}, {loc_CA[1] + 25}")
+                        sys.stdout.flush()
                         pag.moveTo(loc_CA[0] + 50, loc_CA[1] + 25)
                         pag.click()
-                except pag.ImageNotFoundException:
-                    pass
+                except pag.ImageNotFoundException as e:
+                    print(f"Challenge Again button not found: {e}")
+                    sys.stdout.flush()
+                except Exception as e:
+                    print(f"Error locating Challenge Again: {type(e).__name__}: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    sys.stdout.flush()
+                
+                print("Sleeping 1 second...")
+                sys.stdout.flush()
                 time.sleep(1.00)
+                
+                print(f"Looking for Start button at: {START_PATH}")
+                print(f"File exists: {os.path.exists(START_PATH)}")
+                sys.stdout.flush()
+                
                 try:
+                    print("Attempting to locate Start button...")
+                    sys.stdout.flush()
                     loc_START = pag.locateOnWindow(
                         START_PATH, app, confidence=0.9, grayscale=True
                     )
+                    print(f"Start location: {loc_START}")
+                    sys.stdout.flush()
                     if loc_START is not None:
+                        print(f"Clicking Start at {loc_START[0] + 50}, {loc_START[1] + 25}")
+                        sys.stdout.flush()
                         pag.moveTo(loc_START[0] + 50, loc_START[1] + 25)
                         pag.click()
-                except pag.ImageNotFoundException:
-                    pass
+                except pag.ImageNotFoundException as e:
+                    print(f"Start button not found: {e}")
+                    sys.stdout.flush()
+                except Exception as e:
+                    print(f"Error locating Start: {type(e).__name__}: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    sys.stdout.flush()
+                
+                print("Sleeping 1 second before wave_looping...")
+                sys.stdout.flush()
                 time.sleep(1.00)
+                
+                print("Calling wave_looping()...")
+                sys.stdout.flush()
                 wave_looping()
+                print("wave_looping() completed.")
+                sys.stdout.flush()
                 
                 # Small delay between iterations to prevent CPU spinning
                 time.sleep(0.5)
