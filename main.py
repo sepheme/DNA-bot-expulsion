@@ -5,16 +5,23 @@ import os
 import sys
 import random
 import threading
+import traceback
 import tkinter as tk
 from tkinter import messagebox
 from pynput.keyboard import Key, Listener, Controller
-from pynput.mouse import Button, Controller as MouseController
 
 # Initialize pynput keyboard controller as fallback
 _keyboard_controller = Controller()
 
-# Initialize pynput mouse controller
-_mouse_controller = MouseController()
+# Windows API imports for mouse control
+try:
+    import win32api
+    import win32con
+    HAS_WIN32API = True
+except ImportError:
+    HAS_WIN32API = False
+    win32api = None
+    win32con = None
 
 # Windows notification support
 _toaster = None
@@ -121,7 +128,7 @@ def press_keys_randomly():
     sys.stdout.flush()
 
 def move_and_click(x, y):
-    """Move mouse to coordinates and click using pynput.mouse.
+    """Move mouse to coordinates and click using win32api.
     
     Args:
         x: Absolute x coordinate on screen
@@ -131,14 +138,27 @@ def move_and_click(x, y):
         bool: True if successful, False otherwise
     """
     try:
-        # Move mouse to position
-        _mouse_controller.position = (x, y)
+        if not HAS_WIN32API:
+            print("win32api not available. Please install pywin32.")
+            sys.stdout.flush()
+            return False
+        
+        # Move mouse to position using Windows API
+        win32api.SetCursorPos((int(x), int(y)))
         time.sleep(0.05)  # Small delay for movement to complete
-        # Click left button
-        _mouse_controller.click(Button.left)
+        
+        # Click left button down
+        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, int(x), int(y), 0, 0)
+        time.sleep(0.01)  # Small delay between down and up
+        
+        # Click left button up
+        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, int(x), int(y), 0, 0)
+        
         return True
     except Exception as e:
-        print(f"Error with pynput mouse click: {e}")
+        print(f"Error with win32api mouse click: {e}")
+        sys.stdout.flush()
+        traceback.print_exc()
         sys.stdout.flush()
         return False
 
