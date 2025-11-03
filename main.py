@@ -12,7 +12,8 @@ START_PATH = os.path.join(BASE_DIR, "assets", "img", "start.png")
 """"""
 def run_app():
     while app in allTitles:
-        
+        os.system("cls")
+        print("App is running.")
         try:
             loc_CA = pag.locateOnWindow(
                 CHALLENGE_PATH, app, confidence=0.9, grayscale=True
@@ -22,7 +23,7 @@ def run_app():
                 pag.click()
         except pag.ImageNotFoundException:
             pass
-        time.sleep(1.75)
+        time.sleep(1.00)
         try:
             loc_START = pag.locateOnWindow(
                 START_PATH, app, confidence=0.9, grayscale=True
@@ -32,7 +33,7 @@ def run_app():
                 pag.click()
         except pag.ImageNotFoundException:
             pass
-        time.sleep(1.75)
+        time.sleep(1.00)
 
 
 run_app()
