@@ -58,8 +58,13 @@ def find_game_window():
 
 def run_app(stop_event):
     """Main bot loop running in a background thread. Exits when stop_event is set."""
+    # CRITICAL: Print immediately to verify function is called
+    print("\n" + "=" * 50)
+    print(">>> run_app() FUNCTION CALLED! <<<")
+    print("=" * 50)
+    sys.stdout.flush()
+    
     try:
-        print("=" * 50)
         print("Bot thread started.")
         print(f"Stop event status: {stop_event.is_set()}")  # Debug
         print(f"Thread ID: {threading.current_thread().ident}")
@@ -172,8 +177,32 @@ def start_bot():
         print(f"Stop event cleared. Status: {_stop_event.is_set()}")
         sys.stdout.flush()
         
-        _worker_thread = threading.Thread(target=run_app, args=(_stop_event,), daemon=True, name="BotThread")
-        print(f"Thread object created: {_worker_thread}")
+        # Test basic threading first
+        def test_thread():
+            print("TEST: Thread function executed!")
+            sys.stdout.flush()
+            time.sleep(2)
+        
+        test_t = threading.Thread(target=test_thread, daemon=True)
+        test_t.start()
+        time.sleep(0.1)
+        print(f"Test thread alive: {test_t.is_alive()}")
+        sys.stdout.flush()
+        
+        # Wrap run_app to catch any startup errors
+        def safe_run_app(stop_event):
+            try:
+                print("WRAPPER: About to call run_app...")
+                sys.stdout.flush()
+                run_app(stop_event)
+            except Exception as e:
+                print(f"WRAPPER: Exception caught in thread wrapper: {e}")
+                import traceback
+                traceback.print_exc()
+                sys.stdout.flush()
+        
+        _worker_thread = threading.Thread(target=safe_run_app, args=(_stop_event,), daemon=True, name="BotThread")
+        print(f"Thread object created (with wrapper): {_worker_thread}")
         sys.stdout.flush()
         
         _worker_thread.start()
@@ -181,7 +210,7 @@ def start_bot():
         sys.stdout.flush()
         
         # Give thread more time to start and execute first print
-        time.sleep(0.5)
+        time.sleep(1.0)
         
         if _worker_thread.is_alive():
             print("Bot thread created and started successfully")
