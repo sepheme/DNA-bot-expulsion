@@ -9,8 +9,28 @@ import tkinter as tk
 from tkinter import messagebox
 from pynput.keyboard import Key, Listener
 
+# Windows notification support
+try:
+    from win10toast import ToastNotifier
+    HAS_WIN10TOAST = True
+except ImportError:
+    HAS_WIN10TOAST = False
+    try:
+        from plyer import notification
+        HAS_PLYER = True
+    except ImportError:
+        HAS_PLYER = False
+
 app = "Duet Night Abyss  "
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Handle both script and PyInstaller executable paths
+if getattr(sys, 'frozen', False):
+    # Running as compiled executable (PyInstaller)
+    BASE_DIR = sys._MEIPASS
+else:
+    # Running as script
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 CHALLENGE_PATH = os.path.join(BASE_DIR, "assets", "img", "challenge_again.png")
 START_PATH = os.path.join(BASE_DIR, "assets", "img", "start.png")
 CONTINUE_PATH = os.path.join(BASE_DIR, "assets", "img", "continue.png")
@@ -247,11 +267,29 @@ def stop_bot():
         return True
 
 def notify(message, title="Application Notification"):
+    """Show Windows notification if available, otherwise fallback to tkinter messagebox."""
+    try:
+        # Try Windows 10 toast notification first
+        if HAS_WIN10TOAST:
+            toaster = ToastNotifier()
+            toaster.show_toast(title, message, duration=3, threaded=True)
+            return
+        elif HAS_PLYER:
+            notification.notify(
+                title=title,
+                message=message,
+                timeout=3
+            )
+            return
+    except Exception:
+        pass
+    
+    # Fallback to tkinter messagebox
     try:
         messagebox.showinfo(title, message)
     except Exception:
-        # If tkinter pop-up fails, fallback to print
-        print(message)
+        # If all else fails, just print
+        print(f"{title}: {message}")
 
 def on_press(key):
     """Toggle bot on F4 press."""
