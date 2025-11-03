@@ -8,9 +8,13 @@ import threading
 import tkinter as tk
 from tkinter import messagebox
 from pynput.keyboard import Key, Listener, Controller
+from pynput.mouse import Button, Controller as MouseController
 
 # Initialize pynput keyboard controller as fallback
 _keyboard_controller = Controller()
+
+# Initialize pynput mouse controller
+_mouse_controller = MouseController()
 
 # Windows notification support
 _toaster = None
@@ -115,6 +119,28 @@ def press_keys_randomly():
     
     print("Key presses completed.")
     sys.stdout.flush()
+
+def move_and_click(x, y):
+    """Move mouse to coordinates and click using pynput.mouse.
+    
+    Args:
+        x: Absolute x coordinate on screen
+        y: Absolute y coordinate on screen
+    
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        # Move mouse to position
+        _mouse_controller.position = (x, y)
+        time.sleep(0.05)  # Small delay for movement to complete
+        # Click left button
+        _mouse_controller.click(Button.left)
+        return True
+    except Exception as e:
+        print(f"Error with pynput mouse click: {e}")
+        sys.stdout.flush()
+        return False
 
 def find_game_window():
     """Find and activate the game window."""
@@ -251,10 +277,12 @@ def run_app(stop_event):
                     absolute_y = game_window.top + loc_CA[1] + 25
                     print(f"Moving to absolute position: ({absolute_x}, {absolute_y})")
                     sys.stdout.flush()
-                    pag.moveTo(absolute_x, absolute_y)
-                    pag.click()
-                    print("Challenge Again button clicked")
-                    sys.stdout.flush()
+                    if move_and_click(absolute_x, absolute_y):
+                        print("Challenge Again button clicked")
+                        sys.stdout.flush()
+                    else:
+                        print("Failed to click Challenge Again button")
+                        sys.stdout.flush()
                 
                 if loc_START is not None:
                     # Convert window-relative coordinates to absolute screen coordinates
@@ -262,10 +290,12 @@ def run_app(stop_event):
                     absolute_y = game_window.top + loc_START[1] + 25
                     print(f"Moving to absolute position: ({absolute_x}, {absolute_y})")
                     sys.stdout.flush()
-                    pag.moveTo(absolute_x, absolute_y)
-                    pag.click()
-                    print("Start button clicked")
-                    sys.stdout.flush()
+                    if move_and_click(absolute_x, absolute_y):
+                        print("Start button clicked")
+                        sys.stdout.flush()
+                    else:
+                        print("Failed to click Start button")
+                        sys.stdout.flush()
                 
                 # Only press keys randomly if BOTH buttons are not found and flag is enabled
                 if loc_CA is None and loc_START is None:
@@ -320,22 +350,19 @@ def wave_looping(game_window):
                 # Convert window-relative coordinates to absolute screen coordinates
                 absolute_x = game_window.left + loc_CONTINUE[0] + 50
                 absolute_y = game_window.top + loc_CONTINUE[1] + 25
-                pag.moveTo(absolute_x, absolute_y)
-                pag.click()
+                move_and_click(absolute_x, absolute_y)
         elif loc_WAVE8 is not None:
             if loc_RETREAT is not None:
                 # Convert window-relative coordinates to absolute screen coordinates
                 absolute_x = game_window.left + loc_RETREAT[0] + 50
                 absolute_y = game_window.top + loc_RETREAT[1] + 25
-                pag.moveTo(absolute_x, absolute_y)
-                pag.click()
+                move_and_click(absolute_x, absolute_y)
     except Exception as e:
         if loc_CONTINUE is not None:
             # Convert window-relative coordinates to absolute screen coordinates
             absolute_x = game_window.left + loc_CONTINUE[0] + 50
             absolute_y = game_window.top + loc_CONTINUE[1] + 25
-            pag.moveTo(absolute_x, absolute_y)
-            pag.click()
+            move_and_click(absolute_x, absolute_y)
     time.sleep(1.00)
 
 
