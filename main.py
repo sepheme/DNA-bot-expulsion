@@ -314,14 +314,7 @@ def notify(message, title="Application Notification"):
 def on_press(key):
     """Toggle bot on F4 press."""
     try:
-        # Log all key presses
-        key_str = str(key).replace("'", "")
-        print(f"[Key Listener] Key pressed: {key_str}")
-        sys.stdout.flush()
-        
         if key == Key.f4:
-            print("[Key Listener] F4 detected!")
-            sys.stdout.flush()
             # Toggle start/stop
             started = start_bot()
             if started:
