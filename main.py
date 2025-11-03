@@ -57,6 +57,7 @@ MAX_KEY_DELAY = 0.3  # Maximum delay between key presses (seconds)
 MIN_KEY_HOLD_TIME = 0.05  # Minimum time to hold each key down (seconds)
 MAX_KEY_HOLD_TIME = 0.15  # Maximum time to hold each key down (seconds)
 ENABLE_RANDOM_KEY_PRESSES = False  # Enable random key presses when buttons are not found
+ENABLE_NOTIFICATIONS = False  # Enable Windows notifications
 CONFIDENCE_CHALLENGE_START = 0.9  # Confidence for Challenge Again and Start buttons
 CONFIDENCE_CONTINUE_RETREAT = 0.8  # Confidence for Continue and Retreat buttons
 CONFIDENCE_WAVE8 = 0.99  # Confidence for Wave 8 detection
@@ -361,7 +362,11 @@ def stop_bot():
         return True
 
 def notify(message, title="Application Notification"):
-    """Show Windows notification if available, otherwise fallback to tkinter messagebox."""
+    """Show Windows notification if enabled and available, otherwise fallback to tkinter messagebox."""
+    # Check if notifications are enabled
+    if not ENABLE_NOTIFICATIONS:
+        return
+    
     global _toaster
     try:
         # Try Windows 10 toast notification first (use singleton instance)
