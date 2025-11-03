@@ -58,6 +58,7 @@ MIN_KEY_HOLD_TIME = 0.05  # Minimum time to hold each key down (seconds)
 MAX_KEY_HOLD_TIME = 0.15  # Maximum time to hold each key down (seconds)
 ENABLE_RANDOM_KEY_PRESSES = False  # Enable random key presses when buttons are not found
 ENABLE_NOTIFICATIONS = False  # Enable Windows notifications
+ENABLE_WINDOW_DETECTION = False  # Enable automatic window detection, activation, and resizing
 CONFIDENCE_CHALLENGE_START = 0.9  # Confidence for Challenge Again and Start buttons
 CONFIDENCE_CONTINUE_RETREAT = 0.8  # Confidence for Continue and Retreat buttons
 CONFIDENCE_WAVE8 = 0.99  # Confidence for Wave 8 detection
@@ -123,51 +124,55 @@ def find_game_window():
             game_window = windows[0]
             print(f"Found game window: {game_window.title}")
 
-            # Set window position and size if needed
-            target_x = 0
-            target_y = 0
-            target_width = 1920
-            target_height = 1080
-            
-            needs_resize = (game_window.width != target_width or game_window.height != target_height)
-            needs_reposition = (game_window.left != target_x or game_window.top != target_y)
-            
-            if needs_resize or needs_reposition:
-                try:
-                    print(f"Resizing window from {game_window.width}x{game_window.height} to {target_width}x{target_height}")
-                    print(f"Repositioning window from ({game_window.left}, {game_window.top}) to ({target_x}, {target_y})")
-                    game_window.resizeTo(target_width, target_height)
-                    game_window.moveTo(target_x, target_y)
-                    time.sleep(0.3)  # Give window time to resize/reposition
-                    print("Window resized and repositioned successfully")
-                except Exception as e:
-                    print(f"Error resizing/repositioning window: {e}")
-                    sys.stdout.flush()
-
-            # First check if game window is active
-            if not game_window.isActive:
-                print("Game is not the active window. Performing Alt+Tab once...")
-                # Press Alt+Tab once
-                try:
-                    pag.keyDown('alt')
-                    pag.press('tab')
-                    pag.keyUp('alt')
-                except Exception as e:
-                    print(f"Error with PyAutoGUI Alt+Tab, using pynput fallback: {e}")
-                    sys.stdout.flush()
-                    # Fallback to pynput
-                    _keyboard_controller.press(Key.alt)
-                    _keyboard_controller.press(Key.tab)
-                    _keyboard_controller.release(Key.tab)
-                    _keyboard_controller.release(Key.alt)
-                time.sleep(0.3)  # Give window time to activate
+            # Only perform window management if enabled
+            if ENABLE_WINDOW_DETECTION:
+                # Set window position and size if needed
+                target_x = 0
+                target_y = 0
+                target_width = 1920
+                target_height = 1080
                 
-                # Check if window is now active
-                if game_window.isActive:
-                    print("Successfully switched to game window")
-                    time.sleep(0.5)  # Let window settle
-                else:
-                    print("Game window is still not active after Alt+Tab")
+                needs_resize = (game_window.width != target_width or game_window.height != target_height)
+                needs_reposition = (game_window.left != target_x or game_window.top != target_y)
+                
+                if needs_resize or needs_reposition:
+                    try:
+                        print(f"Resizing window from {game_window.width}x{game_window.height} to {target_width}x{target_height}")
+                        print(f"Repositioning window from ({game_window.left}, {game_window.top}) to ({target_x}, {target_y})")
+                        game_window.resizeTo(target_width, target_height)
+                        game_window.moveTo(target_x, target_y)
+                        time.sleep(0.3)  # Give window time to resize/reposition
+                        print("Window resized and repositioned successfully")
+                    except Exception as e:
+                        print(f"Error resizing/repositioning window: {e}")
+                        sys.stdout.flush()
+
+                # First check if game window is active
+                if not game_window.isActive:
+                    print("Game is not the active window. Performing Alt+Tab once...")
+                    # Press Alt+Tab once
+                    try:
+                        pag.keyDown('alt')
+                        pag.press('tab')
+                        pag.keyUp('alt')
+                    except Exception as e:
+                        print(f"Error with PyAutoGUI Alt+Tab, using pynput fallback: {e}")
+                        sys.stdout.flush()
+                        # Fallback to pynput
+                        _keyboard_controller.press(Key.alt)
+                        _keyboard_controller.press(Key.tab)
+                        _keyboard_controller.release(Key.tab)
+                        _keyboard_controller.release(Key.alt)
+                    time.sleep(0.3)  # Give window time to activate
+                    
+                    # Check if window is now active
+                    if game_window.isActive:
+                        print("Successfully switched to game window")
+                        time.sleep(0.5)  # Let window settle
+                    else:
+                        print("Game window is still not active after Alt+Tab")
+            else:
+                print("Window detection disabled. Skipping window management.")
             
             return game_window
         return None
