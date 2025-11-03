@@ -56,6 +56,7 @@ MIN_KEY_DELAY = 0.1  # Minimum delay between key presses (seconds)
 MAX_KEY_DELAY = 0.3  # Maximum delay between key presses (seconds)
 MIN_KEY_HOLD_TIME = 0.05  # Minimum time to hold each key down (seconds)
 MAX_KEY_HOLD_TIME = 0.15  # Maximum time to hold each key down (seconds)
+ENABLE_RANDOM_KEY_PRESSES = False  # Enable random key presses when buttons are not found
 CONFIDENCE_CHALLENGE_START = 0.9  # Confidence for Challenge Again and Start buttons
 CONFIDENCE_CONTINUE_RETREAT = 0.8  # Confidence for Continue and Retreat buttons
 CONFIDENCE_WAVE8 = 0.99  # Confidence for Wave 8 detection
@@ -229,11 +230,15 @@ def run_app(stop_event):
                     print("Start button clicked")
                     sys.stdout.flush()
                 
-                # Only press keys randomly if BOTH buttons are not found
+                # Only press keys randomly if BOTH buttons are not found and flag is enabled
                 if loc_CA is None and loc_START is None:
-                    print("Both Challenge Again and Start buttons not found. Pressing keys randomly...")
-                    sys.stdout.flush()
-                    press_keys_randomly()
+                    if ENABLE_RANDOM_KEY_PRESSES:
+                        print("Both Challenge Again and Start buttons not found. Pressing keys randomly...")
+                        sys.stdout.flush()
+                        press_keys_randomly()
+                    else:
+                        print("Both Challenge Again and Start buttons not found. Random key presses disabled.")
+                        sys.stdout.flush()
                 
                 time.sleep(1.00)
                 wave_looping()
@@ -374,8 +379,68 @@ def notify(message, title="Application Notification"):
         # If all else fails, just print
         print(f"{title}: {message}")
 
+def show_settings_window():
+    """Show a GUI window to toggle random key presses."""
+    global ENABLE_RANDOM_KEY_PRESSES
+    
+    settings_window = tk.Toplevel(root)
+    settings_window.title("DNA Bot Settings")
+    settings_window.geometry("350x180")
+    settings_window.resizable(False, False)
+    settings_window.attributes('-topmost', True)
+    
+    # Label
+    tk.Label(
+        settings_window, 
+        text="Bot Configuration",
+        font=("Arial", 14, "bold")
+    ).pack(pady=15)
+    
+    # Checkbox variable
+    checkbox_var = tk.BooleanVar(value=ENABLE_RANDOM_KEY_PRESSES)
+    
+    # Status label
+    status_label = tk.Label(
+        settings_window,
+        text=f"Current: {'ENABLED' if ENABLE_RANDOM_KEY_PRESSES else 'DISABLED'}",
+        font=("Arial", 9),
+        fg="green" if ENABLE_RANDOM_KEY_PRESSES else "red"
+    )
+    status_label.pack(pady=5)
+    
+    # Update global variable when checkbox changes
+    def update_flag():
+        global ENABLE_RANDOM_KEY_PRESSES
+        ENABLE_RANDOM_KEY_PRESSES = checkbox_var.get()
+        status = "ENABLED" if ENABLE_RANDOM_KEY_PRESSES else "DISABLED"
+        status_label.config(
+            text=f"Current: {status}",
+            fg="green" if ENABLE_RANDOM_KEY_PRESSES else "red"
+        )
+        print(f"[Settings] Random key presses: {status}")
+        notify(f"Random key presses {status.lower()}", "Settings Updated")
+    
+    # Checkbox
+    checkbox = tk.Checkbutton(
+        settings_window,
+        text="Enable random key presses\nwhen buttons are not found",
+        variable=checkbox_var,
+        font=("Arial", 10),
+        command=update_flag,
+        justify=tk.LEFT
+    )
+    checkbox.pack(pady=10)
+    
+    # Close button
+    tk.Button(
+        settings_window,
+        text="Close",
+        command=settings_window.destroy,
+        width=12
+    ).pack(pady=10)
+
 def on_press(key):
-    """Toggle bot on F4 press."""
+    """Toggle bot on F4 press, open settings on F5."""
     try:
         if key == Key.f4:
             # Toggle start/stop
@@ -391,6 +456,10 @@ def on_press(key):
                 else:
                     # If start failed because already running, attempt to stop
                     notify("Bot is already running or stopping. Press F4 again to toggle.")
+        elif key == Key.f5:
+            # Open settings window
+            show_settings_window()
+            print(">>> F5 pressed — Settings window opened.")
     except Exception as e:
         print(f"Keyboard handler error: {e}")
         import traceback
@@ -399,6 +468,7 @@ def on_press(key):
 if __name__ == "__main__":
     print("-" * 50)
     print("F4 toggles the bot on/off.")
+    print("F5 opens settings window.")
     print("Press Ctrl+C to exit")
     print("-" * 50)
     print("Listening for keyboard input...")
