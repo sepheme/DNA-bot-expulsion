@@ -27,9 +27,9 @@ MIN_KEY_HOLD_TIME = 0.05  # Minimum time to hold each key down (seconds)
 MAX_KEY_HOLD_TIME = 0.15  # Maximum time to hold each key down (seconds)
 
 # Feature flags
-ENABLE_RANDOM_KEY_PRESSES = False  # Enable random key presses when buttons are not found
-ENABLE_NOTIFICATIONS = False  # Enable Windows notifications
-ENABLE_WINDOW_DETECTION = False  # Enable automatic window detection, activation, and resizing
+ENABLE_RANDOM_KEY_PRESSES = True  # Enable random key presses when buttons are not found
+ENABLE_NOTIFICATIONS = True  # Enable Windows notifications
+ENABLE_WINDOW_DETECTION = True  # Enable automatic window detection, activation, and resizing
 
 # Image recognition confidence levels
 CONFIDENCE_CHALLENGE_START = 0.9  # Confidence for Challenge Again and Start buttons
