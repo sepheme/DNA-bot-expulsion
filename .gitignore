@@ -2,6 +2,7 @@
 dist/
 build/
 *.spec
+!DNA-Bot-Expulsion.spec
 __pycache__/
 *.pyc
 *.pyo
