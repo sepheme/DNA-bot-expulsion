@@ -9,11 +9,15 @@ import traceback
 import tkinter as tk
 from tkinter import messagebox
 from pynput.keyboard import Key, Listener, Controller
+from pynput.mouse import Button, Controller as MouseController
 
 # Initialize pynput keyboard controller as fallback
 _keyboard_controller = Controller()
 
-# Mouse control using pydirectinput-rgx (better for games)
+# Initialize pynput mouse controller as fallback
+_mouse_controller = MouseController()
+
+# Mouse control using pydirectinput-rgx (fallback for games)
 try:
     import pydirectinput
     HAS_PYDIRECTINPUT = True
@@ -126,7 +130,8 @@ def press_keys_randomly():
     sys.stdout.flush()
 
 def move_and_click(x, y):
-    """Move mouse to coordinates and click using pydirectinput-rgx.
+    """Move mouse to coordinates and click with fallback chain.
+    Tries: pyautogui -> pynput.mouse -> pydirectinput
     
     Args:
         x: Absolute x coordinate on screen
@@ -135,36 +140,60 @@ def move_and_click(x, y):
     Returns:
         bool: True if successful, False otherwise
     """
-    if not HAS_PYDIRECTINPUT:
-        print("pydirectinput not available. Please install pydirectinput-rgx.")
-        sys.stdout.flush()
-        return False
+    x_int = int(x)
+    y_int = int(y)
     
+    print(f"Attempting to move mouse to ({x_int}, {y_int})")
+    sys.stdout.flush()
+    
+    # Method 1: Try pyautogui first
     try:
-        x_int = int(x)
-        y_int = int(y)
-        
-        print(f"Attempting to move mouse to ({x_int}, {y_int})")
-        sys.stdout.flush()
-        
-        # Move mouse to position using pydirectinput
-        pydirectinput.moveTo(x_int, y_int)
+        pag.moveTo(x_int, y_int)
         time.sleep(0.05)  # Small delay for movement to complete
-        
-        # Click at current position
-        pydirectinput.click()
-        
-        print(f"Mouse click successful at ({x_int}, {y_int})")
+        pag.click()
+        print(f"Mouse click successful using pyautogui at ({x_int}, {y_int})")
         sys.stdout.flush()
         return True
-        
     except Exception as e:
-        print(f"Error with pydirectinput mouse click: {e}")
-        print(f"Error type: {type(e).__name__}")
+        print(f"pyautogui failed: {e}")
         sys.stdout.flush()
-        traceback.print_exc()
+        # Fall through to next method
+    
+    # Method 2: Try pynput.mouse
+    try:
+        _mouse_controller.position = (x_int, y_int)
+        time.sleep(0.05)  # Small delay for movement to complete
+        _mouse_controller.click(Button.left)
+        print(f"Mouse click successful using pynput.mouse at ({x_int}, {y_int})")
         sys.stdout.flush()
-        return False
+        return True
+    except Exception as e:
+        print(f"pynput.mouse failed: {e}")
+        sys.stdout.flush()
+        # Fall through to next method
+    
+    # Method 3: Try pydirectinput (last resort)
+    if HAS_PYDIRECTINPUT:
+        try:
+            pydirectinput.moveTo(x_int, y_int)
+            time.sleep(0.05)  # Small delay for movement to complete
+            pydirectinput.click()
+            print(f"Mouse click successful using pydirectinput at ({x_int}, {y_int})")
+            sys.stdout.flush()
+            return True
+        except Exception as e:
+            print(f"pydirectinput failed: {e}")
+            sys.stdout.flush()
+    else:
+        print("pydirectinput not available.")
+        sys.stdout.flush()
+    
+    # All methods failed
+    print(f"All mouse click methods failed for ({x_int}, {y_int})")
+    sys.stdout.flush()
+    traceback.print_exc()
+    sys.stdout.flush()
+    return False
 
 def find_game_window():
     """Find and activate the game window."""
@@ -481,6 +510,54 @@ def notify(message, title="Application Notification"):
         # If all else fails, just print
         print(f"{title}: {message}")
 
+def is_admin():
+    """Check if the script is running with administrator privileges on Windows.
+    
+    Returns:
+        bool: True if running as admin on Windows, True on non-Windows systems
+    """
+    if os.name != 'nt':
+        # Not Windows, assume admin mode is not required
+        return True
+    
+    try:
+        import ctypes
+        # Check if the current user has admin privileges
+        return ctypes.windll.shell32.IsUserAnAdmin() != 0
+    except Exception:
+        # If check fails, assume not admin to be safe
+        return False
+
+def check_admin_privileges():
+    """Check if running as admin and exit with error if not."""
+    if not is_admin():
+        error_msg = (
+            "ERROR: Administrator privileges are required to run this application.\n"
+            "Please run this script/executable as Administrator.\n"
+            "\n"
+            "On Windows:\n"
+            "  - Right-click on the script/executable\n"
+            "  - Select 'Run as administrator'\n"
+            "\n"
+            "Or run from command prompt:\n"
+            "  - Right-click Command Prompt\n"
+            "  - Select 'Run as administrator'\n"
+            "  - Navigate to script location and run it"
+        )
+        print(error_msg)
+        sys.stdout.flush()
+        
+        # Try to show error in messagebox
+        try:
+            root = tk.Tk()
+            root.withdraw()
+            messagebox.showerror("Administrator Required", error_msg)
+            root.destroy()
+        except Exception:
+            pass
+        
+        sys.exit(1)
+
 def on_press(key):
     """Toggle bot on F4 press."""
     try:
@@ -504,6 +581,9 @@ def on_press(key):
         traceback.print_exc()
 
 if __name__ == "__main__":
+    # Check for admin privileges first
+    check_admin_privileges()
+    
     print("-" * 50)
     print("F4 toggles the bot on/off.")
     print("Press Ctrl+C to exit")
