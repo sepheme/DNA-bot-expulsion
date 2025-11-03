@@ -69,6 +69,7 @@ root.withdraw()
 _stop_event = threading.Event()
 _worker_thread = None
 _worker_lock = threading.Lock()
+_settings_window_requested = threading.Event()  # Flag to request settings window from main thread
 
 def press_keys_randomly():
     """Press W key randomly between MIN_KEY_PRESSES and MAX_KEY_PRESSES times, then D key the same.
@@ -514,9 +515,9 @@ def on_press(key):
                     # If start failed because already running, attempt to stop
                     notify("Bot is already running or stopping. Press F4 again to toggle.")
         elif key == Key.f5:
-            # Open settings window
-            show_settings_window()
-            print(">>> F5 pressed — Settings window opened.")
+            # Request settings window (will be created in main thread)
+            _settings_window_requested.set()
+            print(">>> F5 pressed — Settings window requested.")
     except Exception as e:
         print(f"Keyboard handler error: {e}")
         import traceback
@@ -543,9 +544,22 @@ if __name__ == "__main__":
         print("Go to System Preferences > Security & Privacy > Privacy > Accessibility")
     
     try:
-        # Keep the main thread alive
+        # Keep the main thread alive and process tkinter events
+        def check_settings_request():
+            """Check if settings window was requested and create it in main thread."""
+            if _settings_window_requested.is_set():
+                _settings_window_requested.clear()
+                show_settings_window()
+            # Schedule next check
+            root.after(100, check_settings_request)
+        
+        # Start checking for settings window requests
+        check_settings_request()
+        
+        # Process tkinter events in main loop
         while True:
-            time.sleep(0.1)
+            root.update()
+            time.sleep(0.01)
     except KeyboardInterrupt:
         print("\nCtrl+C detected - shutting down...")
         # Stop the bot if it's running
