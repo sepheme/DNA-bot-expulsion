@@ -189,8 +189,22 @@ def start_bot():
         print(f"Test thread alive: {test_t.is_alive()}")
         sys.stdout.flush()
         
+        # Test if run_app works when called directly (not in thread)
+        print("\nTESTING: Calling run_app directly (not in thread)...")
+        print("This will block for 2 seconds, then we'll test threading.")
+        sys.stdout.flush()
+        
+        # Don't actually call it - just verify it's callable
+        print(f"run_app is callable: {callable(run_app)}")
+        print(f"run_app function: {run_app}")
+        sys.stdout.flush()
+        
         # Wrap run_app to catch any startup errors
         def safe_run_app(stop_event):
+            print("\n" + "!" * 50)
+            print("WRAPPER FUNCTION CALLED!")
+            print("!" * 50)
+            sys.stdout.flush()
             try:
                 print("WRAPPER: About to call run_app...")
                 sys.stdout.flush()
@@ -200,17 +214,35 @@ def start_bot():
                 import traceback
                 traceback.print_exc()
                 sys.stdout.flush()
+            finally:
+                print("WRAPPER: Function finished")
+                sys.stdout.flush()
+        
+        print(f"Creating thread with target: {safe_run_app}")
+        print(f"Target function type: {type(safe_run_app)}")
+        sys.stdout.flush()
         
         _worker_thread = threading.Thread(target=safe_run_app, args=(_stop_event,), daemon=True, name="BotThread")
         print(f"Thread object created (with wrapper): {_worker_thread}")
+        print(f"Thread daemon: {_worker_thread.daemon}")
         sys.stdout.flush()
         
+        print("Calling thread.start()...")
+        sys.stdout.flush()
         _worker_thread.start()
+        
         print(f"Thread.start() called. Thread alive: {_worker_thread.is_alive()}")
+        print(f"Thread ident: {_worker_thread.ident}")
         sys.stdout.flush()
         
-        # Give thread more time to start and execute first print
-        time.sleep(1.0)
+        # Check multiple times to see if thread starts executing
+        for i in range(10):
+            time.sleep(0.2)
+            alive = _worker_thread.is_alive()
+            print(f"After {i*0.2:.1f}s - Thread alive: {alive}")
+            sys.stdout.flush()
+            if not alive:
+                break
         
         if _worker_thread.is_alive():
             print("Bot thread created and started successfully")
