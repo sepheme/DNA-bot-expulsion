@@ -48,7 +48,6 @@ a = Analysis(
         'unittest',
         'email',
         'http',
-        'urllib',
         'xml',
         'pydoc',
         'doctest',
