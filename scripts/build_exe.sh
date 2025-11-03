@@ -14,14 +14,7 @@ fi
 
 echo ""
 echo "Creating executable..."
-python3 -m PyInstaller --onefile --name "DNA-Bot-Expulsion" \
-    --add-data "assets:assets" \
-    --hidden-import=win10toast \
-    --hidden-import=pynput.keyboard \
-    --hidden-import=pyautogui \
-    --hidden-import=pygetwindow \
-    --hidden-import=tkinter \
-    main.py
+python3 -m PyInstaller DNA-Bot-Expulsion.spec
 
 echo ""
 echo "Build complete! Check the 'dist' folder for DNA-Bot-Expulsion"

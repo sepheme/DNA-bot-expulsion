@@ -14,16 +14,7 @@ if errorlevel 1 (
 
 echo.
 echo Creating executable...
-python -m PyInstaller --onefile --console --name "DNA-Bot-Expulsion" --icon=NONE ^
-    --add-data "assets;assets" ^
-    --hidden-import=win10toast ^
-    --hidden-import=pynput.keyboard ^
-    --hidden-import=pyautogui ^
-    --hidden-import=pygetwindow ^
-    --hidden-import=tkinter ^
-    --hidden-import=win10toast.toast ^
-    --collect-all=win10toast ^
-    main.py
+python -m PyInstaller DNA-Bot-Expulsion.spec
 
 echo.
 echo Build complete! Check the 'dist' folder for DNA-Bot-Expulsion.exe
