@@ -21,6 +21,8 @@ WAVE8_PATH = os.path.join(BASE_DIR, "assets", "img", "wave8.png")
 # Configuration variables
 MIN_KEY_PRESSES = 15  # Minimum number of key presses for W and D keys
 MAX_KEY_PRESSES = 25  # Maximum number of key presses for W and D keys
+MIN_KEY_DELAY = 0.1  # Minimum delay between key presses (seconds)
+MAX_KEY_DELAY = 0.3  # Maximum delay between key presses (seconds)
 CONFIDENCE_CHALLENGE_START = 0.9  # Confidence for Challenge Again and Start buttons
 CONFIDENCE_CONTINUE_RETREAT = 0.8  # Confidence for Continue and Retreat buttons
 CONFIDENCE_WAVE8 = 0.99  # Confidence for Wave 8 detection
@@ -43,13 +45,13 @@ def press_keys_randomly():
     sys.stdout.flush()
     for _ in range(w_presses):
         pag.press('w')
-        time.sleep(random.uniform(0.05, 0.15))  # Random delay between presses
+        time.sleep(random.uniform(MIN_KEY_DELAY, MAX_KEY_DELAY))
     
     print(f"Pressing D key {d_presses} times...")
     sys.stdout.flush()
     for _ in range(d_presses):
         pag.press('d')
-        time.sleep(random.uniform(0.05, 0.15))  # Random delay between presses
+        time.sleep(random.uniform(MIN_KEY_DELAY, MAX_KEY_DELAY))
     
     print("Key presses completed.")
     sys.stdout.flush()
