@@ -7,7 +7,10 @@ import random
 import threading
 import tkinter as tk
 from tkinter import messagebox
-from pynput.keyboard import Key, Listener
+from pynput.keyboard import Key, Listener, Controller
+
+# Initialize pynput keyboard controller as fallback
+_keyboard_controller = Controller()
 
 # Windows notification support
 try:
@@ -64,20 +67,39 @@ def press_keys_randomly():
     w_presses = random.randint(MIN_KEY_PRESSES, MAX_KEY_PRESSES)
     d_presses = random.randint(MIN_KEY_PRESSES, MAX_KEY_PRESSES)
     
+    # Send Windows notification
+    notify("Pressing keys randomly", f"W key: {w_presses} times, D key: {d_presses} times")
+    
     print(f"Pressing W key {w_presses} times...")
     sys.stdout.flush()
     for _ in range(w_presses):
-        pag.keyDown('w')
-        time.sleep(random.uniform(MIN_KEY_HOLD_TIME, MAX_KEY_HOLD_TIME))
-        pag.keyUp('w')
+        try:
+            pag.keyDown('w')
+            time.sleep(random.uniform(MIN_KEY_HOLD_TIME, MAX_KEY_HOLD_TIME))
+            pag.keyUp('w')
+        except Exception as e:
+            print(f"Error with PyAutoGUI key press, using pynput fallback: {e}")
+            sys.stdout.flush()
+            # Fallback to pynput
+            _keyboard_controller.press('w')
+            time.sleep(random.uniform(MIN_KEY_HOLD_TIME, MAX_KEY_HOLD_TIME))
+            _keyboard_controller.release('w')
         time.sleep(random.uniform(MIN_KEY_DELAY, MAX_KEY_DELAY))
     
     print(f"Pressing D key {d_presses} times...")
     sys.stdout.flush()
     for _ in range(d_presses):
-        pag.keyDown('d')
-        time.sleep(random.uniform(MIN_KEY_HOLD_TIME, MAX_KEY_HOLD_TIME))
-        pag.keyUp('d')
+        try:
+            pag.keyDown('d')
+            time.sleep(random.uniform(MIN_KEY_HOLD_TIME, MAX_KEY_HOLD_TIME))
+            pag.keyUp('d')
+        except Exception as e:
+            print(f"Error with PyAutoGUI key press, using pynput fallback: {e}")
+            sys.stdout.flush()
+            # Fallback to pynput
+            _keyboard_controller.press('d')
+            time.sleep(random.uniform(MIN_KEY_HOLD_TIME, MAX_KEY_HOLD_TIME))
+            _keyboard_controller.release('d')
         time.sleep(random.uniform(MIN_KEY_DELAY, MAX_KEY_DELAY))
     
     print("Key presses completed.")
@@ -95,9 +117,18 @@ def find_game_window():
             if not game_window.isActive:
                 print("Game is not the active window. Performing Alt+Tab once...")
                 # Press Alt+Tab once
-                pag.keyDown('alt')
-                pag.press('tab')
-                pag.keyUp('alt')
+                try:
+                    pag.keyDown('alt')
+                    pag.press('tab')
+                    pag.keyUp('alt')
+                except Exception as e:
+                    print(f"Error with PyAutoGUI Alt+Tab, using pynput fallback: {e}")
+                    sys.stdout.flush()
+                    # Fallback to pynput
+                    _keyboard_controller.press(Key.alt)
+                    _keyboard_controller.press(Key.tab)
+                    _keyboard_controller.release(Key.tab)
+                    _keyboard_controller.release(Key.alt)
                 time.sleep(0.3)  # Give window time to activate
                 
                 # Check if window is now active
@@ -133,6 +164,7 @@ def run_app(stop_event):
                 
                 print("Checking for Challenge Again button...")
                 sys.stdout.flush()
+                notify("Checking screen", "Looking for Challenge Again button...")
                 try:
                     loc_CA = pag.locateOnWindow(
                         CHALLENGE_PATH, app, confidence=CONFIDENCE_CHALLENGE_START, grayscale=True
@@ -162,6 +194,7 @@ def run_app(stop_event):
                 
                 print("Checking for Start button...")
                 sys.stdout.flush()
+                notify("Checking screen", "Looking for Start button...")
                 try:
                     loc_START = pag.locateOnWindow(
                         START_PATH, app, confidence=CONFIDENCE_CHALLENGE_START, grayscale=True
