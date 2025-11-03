@@ -69,7 +69,6 @@ root.withdraw()
 _stop_event = threading.Event()
 _worker_thread = None
 _worker_lock = threading.Lock()
-_settings_window_requested = threading.Event()  # Flag to request settings window from main thread
 
 def press_keys_randomly():
     """Press W key randomly between MIN_KEY_PRESSES and MAX_KEY_PRESSES times, then D key the same.
@@ -122,6 +121,27 @@ def find_game_window():
         if windows:
             game_window = windows[0]
             print(f"Found game window: {game_window.title}")
+
+            # Set window position and size if needed
+            target_x = 0
+            target_y = 0
+            target_width = 1920
+            target_height = 1080
+            
+            needs_resize = (game_window.width != target_width or game_window.height != target_height)
+            needs_reposition = (game_window.left != target_x or game_window.top != target_y)
+            
+            if needs_resize or needs_reposition:
+                try:
+                    print(f"Resizing window from {game_window.width}x{game_window.height} to {target_width}x{target_height}")
+                    print(f"Repositioning window from ({game_window.left}, {game_window.top}) to ({target_x}, {target_y})")
+                    game_window.resizeTo(target_width, target_height)
+                    game_window.moveTo(target_x, target_y)
+                    time.sleep(0.3)  # Give window time to resize/reposition
+                    print("Window resized and repositioned successfully")
+                except Exception as e:
+                    print(f"Error resizing/repositioning window: {e}")
+                    sys.stdout.flush()
 
             # First check if game window is active
             if not game_window.isActive:
@@ -380,125 +400,8 @@ def notify(message, title="Application Notification"):
         # If all else fails, just print
         print(f"{title}: {message}")
 
-def show_settings_window():
-    """Show a GUI window to toggle random key presses and adjust confidence."""
-    global ENABLE_RANDOM_KEY_PRESSES, CONFIDENCE_CHALLENGE_START
-    
-    settings_window = tk.Toplevel(root)
-    settings_window.title("DNA Bot Settings")
-    settings_window.geometry("350x280")
-    settings_window.resizable(False, False)
-    settings_window.attributes('-topmost', True)
-    
-    # Label
-    tk.Label(
-        settings_window, 
-        text="Bot Configuration",
-        font=("Arial", 14, "bold")
-    ).pack(pady=10)
-    
-    # Random Key Presses Section
-    tk.Label(
-        settings_window,
-        text="Random Key Presses:",
-        font=("Arial", 10, "bold")
-    ).pack(pady=(5, 0))
-    
-    # Checkbox variable
-    checkbox_var = tk.BooleanVar(value=ENABLE_RANDOM_KEY_PRESSES)
-    
-    # Status label
-    status_label = tk.Label(
-        settings_window,
-        text=f"Current: {'ENABLED' if ENABLE_RANDOM_KEY_PRESSES else 'DISABLED'}",
-        font=("Arial", 9),
-        fg="green" if ENABLE_RANDOM_KEY_PRESSES else "red"
-    )
-    status_label.pack(pady=2)
-    
-    # Update global variable when checkbox changes
-    def update_flag():
-        global ENABLE_RANDOM_KEY_PRESSES
-        ENABLE_RANDOM_KEY_PRESSES = checkbox_var.get()
-        status = "ENABLED" if ENABLE_RANDOM_KEY_PRESSES else "DISABLED"
-        status_label.config(
-            text=f"Current: {status}",
-            fg="green" if ENABLE_RANDOM_KEY_PRESSES else "red"
-        )
-        print(f"[Settings] Random key presses: {status}")
-        notify(f"Random key presses {status.lower()}", "Settings Updated")
-    
-    # Checkbox
-    checkbox = tk.Checkbutton(
-        settings_window,
-        text="Enable random key presses\nwhen buttons are not found",
-        variable=checkbox_var,
-        font=("Arial", 10),
-        command=update_flag,
-        justify=tk.LEFT
-    )
-    checkbox.pack(pady=5)
-    
-    # Confidence Section
-    tk.Label(
-        settings_window,
-        text="Button Detection Confidence:",
-        font=("Arial", 10, "bold")
-    ).pack(pady=(10, 5))
-    
-    # Create confidence options from 50% to 90%
-    confidence_options = [f"{i}%" for i in range(50, 91, 5)]  # 50%, 55%, 60%, ..., 90%
-    current_confidence_percent = int(CONFIDENCE_CHALLENGE_START * 100)
-    current_confidence_str = f"{current_confidence_percent}%"
-    
-    # Use the closest available value if current doesn't match exactly
-    if current_confidence_str not in confidence_options:
-        # Find closest value
-        closest = min(confidence_options, key=lambda x: abs(int(x[:-1]) - current_confidence_percent))
-        current_confidence_str = closest
-    
-    # Confidence dropdown variable
-    confidence_var = tk.StringVar(value=current_confidence_str)
-    
-    # Confidence status label
-    confidence_status_label = tk.Label(
-        settings_window,
-        text=f"Current: {current_confidence_str}",
-        font=("Arial", 9),
-        fg="blue"
-    )
-    confidence_status_label.pack(pady=2)
-    
-    # Update confidence function
-    def update_confidence(*args):
-        global CONFIDENCE_CHALLENGE_START
-        selected = confidence_var.get()
-        confidence_value = int(selected.replace('%', '')) / 100.0
-        CONFIDENCE_CHALLENGE_START = confidence_value
-        confidence_status_label.config(text=f"Current: {selected}")
-        print(f"[Settings] Confidence set to: {selected} ({confidence_value})")
-        notify(f"Confidence set to {selected}", "Settings Updated")
-    
-    # Create dropdown menu
-    confidence_dropdown = tk.OptionMenu(
-        settings_window,
-        confidence_var,
-        *confidence_options,
-        command=update_confidence
-    )
-    confidence_dropdown.config(width=15, font=("Arial", 10))
-    confidence_dropdown.pack(pady=5)
-    
-    # Close button
-    tk.Button(
-        settings_window,
-        text="Close",
-        command=settings_window.destroy,
-        width=12
-    ).pack(pady=15)
-
 def on_press(key):
-    """Toggle bot on F4 press, open settings on F5."""
+    """Toggle bot on F4 press."""
     try:
         if key == Key.f4:
             # Toggle start/stop
@@ -514,10 +417,6 @@ def on_press(key):
                 else:
                     # If start failed because already running, attempt to stop
                     notify("Bot is already running or stopping. Press F4 again to toggle.")
-        elif key == Key.f5:
-            # Request settings window (will be created in main thread)
-            _settings_window_requested.set()
-            print(">>> F5 pressed — Settings window requested.")
     except Exception as e:
         print(f"Keyboard handler error: {e}")
         import traceback
@@ -526,7 +425,6 @@ def on_press(key):
 if __name__ == "__main__":
     print("-" * 50)
     print("F4 toggles the bot on/off.")
-    print("F5 opens settings window.")
     print("Press Ctrl+C to exit")
     print("-" * 50)
     print("Listening for keyboard input...")
@@ -544,22 +442,9 @@ if __name__ == "__main__":
         print("Go to System Preferences > Security & Privacy > Privacy > Accessibility")
     
     try:
-        # Keep the main thread alive and process tkinter events
-        def check_settings_request():
-            """Check if settings window was requested and create it in main thread."""
-            if _settings_window_requested.is_set():
-                _settings_window_requested.clear()
-                show_settings_window()
-            # Schedule next check
-            root.after(100, check_settings_request)
-        
-        # Start checking for settings window requests
-        check_settings_request()
-        
-        # Process tkinter events in main loop
+        # Keep the main thread alive
         while True:
-            root.update()
-            time.sleep(0.01)
+            time.sleep(0.1)
     except KeyboardInterrupt:
         print("\nCtrl+C detected - shutting down...")
         # Stop the bot if it's running
