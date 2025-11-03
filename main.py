@@ -3,6 +3,7 @@ import pygetwindow as pgw
 import time
 import os
 import sys
+import random
 import threading
 import tkinter as tk
 from tkinter import messagebox
@@ -17,6 +18,13 @@ RETREAT_PATH = os.path.join(BASE_DIR, "assets", "img", "retreat.png")
 WAVE6_PATH = os.path.join(BASE_DIR, "assets", "img", "wave_06.png")
 WAVE8_PATH = os.path.join(BASE_DIR, "assets", "img", "wave8.png")
 
+# Configuration variables
+MIN_KEY_PRESSES = 15  # Minimum number of key presses for W and D keys
+MAX_KEY_PRESSES = 25  # Maximum number of key presses for W and D keys
+CONFIDENCE_CHALLENGE_START = 0.9  # Confidence for Challenge Again and Start buttons
+CONFIDENCE_CONTINUE_RETREAT = 0.8  # Confidence for Continue and Retreat buttons
+CONFIDENCE_WAVE8 = 0.99  # Confidence for Wave 8 detection
+
 # Hidden tkinter root for messageboxes
 root = tk.Tk()
 root.withdraw()
@@ -25,6 +33,26 @@ root.withdraw()
 _stop_event = threading.Event()
 _worker_thread = None
 _worker_lock = threading.Lock()
+
+def press_keys_randomly():
+    """Press W key randomly between MIN_KEY_PRESSES and MAX_KEY_PRESSES times, then D key the same."""
+    w_presses = random.randint(MIN_KEY_PRESSES, MAX_KEY_PRESSES)
+    d_presses = random.randint(MIN_KEY_PRESSES, MAX_KEY_PRESSES)
+    
+    print(f"Pressing W key {w_presses} times...")
+    sys.stdout.flush()
+    for _ in range(w_presses):
+        pag.press('w')
+        time.sleep(random.uniform(0.05, 0.15))  # Random delay between presses
+    
+    print(f"Pressing D key {d_presses} times...")
+    sys.stdout.flush()
+    for _ in range(d_presses):
+        pag.press('d')
+        time.sleep(random.uniform(0.05, 0.15))  # Random delay between presses
+    
+    print("Key presses completed.")
+    sys.stdout.flush()
 
 def find_game_window():
     """Find and activate the game window."""
@@ -76,13 +104,17 @@ def run_app(stop_event):
                 
                 try:
                     loc_CA = pag.locateOnWindow(
-                        CHALLENGE_PATH, app, confidence=0.9, grayscale=True
+                        CHALLENGE_PATH, app, confidence=CONFIDENCE_CHALLENGE_START, grayscale=True
                     )
                     if loc_CA is not None:
                         pag.moveTo(loc_CA[0] + 50, loc_CA[1] + 25)
                         pag.click()
+                    else:
+                        # Button not found, press keys randomly
+                        press_keys_randomly()
                 except pag.ImageNotFoundException:
-                    pass
+                    # Button not found, press keys randomly
+                    press_keys_randomly()
                 except Exception as e:
                     print(f"Error locating Challenge Again: {e}")
                     sys.stdout.flush()
@@ -91,13 +123,17 @@ def run_app(stop_event):
                 
                 try:
                     loc_START = pag.locateOnWindow(
-                        START_PATH, app, confidence=0.9, grayscale=True
+                        START_PATH, app, confidence=CONFIDENCE_CHALLENGE_START, grayscale=True
                     )
                     if loc_START is not None:
                         pag.moveTo(loc_START[0] + 50, loc_START[1] + 25)
                         pag.click()
+                    else:
+                        # Button not found, press keys randomly
+                        press_keys_randomly()
                 except pag.ImageNotFoundException:
-                    pass
+                    # Button not found, press keys randomly
+                    press_keys_randomly()
                 except Exception as e:
                     print(f"Error locating Start: {e}")
                     sys.stdout.flush()
@@ -131,13 +167,13 @@ def wave_looping():
     loc_WAVE8 = None
     try:
         loc_CONTINUE = pag.locateOnWindow(
-            CONTINUE_PATH, app, confidence=0.8, grayscale=True
+            CONTINUE_PATH, app, confidence=CONFIDENCE_CONTINUE_RETREAT, grayscale=True
         )
         loc_RETREAT = pag.locateOnWindow(
-            RETREAT_PATH, app, confidence=0.8, grayscale=True
+            RETREAT_PATH, app, confidence=CONFIDENCE_CONTINUE_RETREAT, grayscale=True
         )
         loc_WAVE8 = pag.locateOnWindow(
-            WAVE8_PATH, app, confidence=0.99, grayscale=True
+            WAVE8_PATH, app, confidence=CONFIDENCE_WAVE8, grayscale=True
         )
         if loc_WAVE8 is None:
             if loc_CONTINUE is not None:
