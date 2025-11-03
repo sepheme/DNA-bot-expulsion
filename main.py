@@ -6,35 +6,73 @@ import sys
 import random
 import threading
 import traceback
+import json
 import tkinter as tk
 from tkinter import messagebox
 from pynput.keyboard import Key, Listener, Controller
 from pynput.mouse import Button, Controller as MouseController
 
 # ============================================================================
-# CONFIGURATION VARIABLES AND FLAGS
+# CONFIGURATION LOADING
 # ============================================================================
 
+# Handle both script and PyInstaller executable paths
+if getattr(sys, 'frozen', False):
+    # Running as compiled executable (PyInstaller)
+    BASE_DIR = sys._MEIPASS
+else:
+    # Running as script
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Load configuration from config.json
+CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
+
+def load_config():
+    """Load configuration from config.json file."""
+    try:
+        with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        return config
+    except FileNotFoundError:
+        print(f"Error: config.json not found at {CONFIG_PATH}")
+        print("Please ensure config.json exists in the same directory as the script.")
+        sys.exit(1)
+    except json.JSONDecodeError as e:
+        print(f"Error: Invalid JSON in config.json: {e}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error loading config.json: {e}")
+        sys.exit(1)
+
+# Load configuration
+config = load_config()
+
 # Application name
-app = "Duet Night Abyss  "
+app = config.get("app_name", "Duet Night Abyss  ")
 
 # Key press configuration
-MIN_KEY_PRESSES = 15  # Minimum number of key presses for W and D keys
-MAX_KEY_PRESSES = 25  # Maximum number of key presses for W and D keys
-MIN_KEY_DELAY = 0.1  # Minimum delay between key presses (seconds)
-MAX_KEY_DELAY = 0.3  # Maximum delay between key presses (seconds)
-MIN_KEY_HOLD_TIME = 0.05  # Minimum time to hold each key down (seconds)
-MAX_KEY_HOLD_TIME = 0.15  # Maximum time to hold each key down (seconds)
+MIN_KEY_PRESSES = config.get("key_press", {}).get("min_key_presses", 15)
+MAX_KEY_PRESSES = config.get("key_press", {}).get("max_key_presses", 25)
+MIN_KEY_DELAY = config.get("key_press", {}).get("min_key_delay", 0.1)
+MAX_KEY_DELAY = config.get("key_press", {}).get("max_key_delay", 0.3)
+MIN_KEY_HOLD_TIME = config.get("key_press", {}).get("min_key_hold_time", 0.05)
+MAX_KEY_HOLD_TIME = config.get("key_press", {}).get("max_key_hold_time", 0.15)
 
 # Feature flags
-ENABLE_RANDOM_KEY_PRESSES = True  # Enable random key presses when buttons are not found
-ENABLE_NOTIFICATIONS = True  # Enable Windows notifications
-ENABLE_WINDOW_DETECTION = True  # Enable automatic window detection, activation, and resizing
+ENABLE_RANDOM_KEY_PRESSES = config.get("features", {}).get("enable_random_key_presses", True)
+ENABLE_NOTIFICATIONS = config.get("features", {}).get("enable_notifications", True)
+ENABLE_WINDOW_DETECTION = config.get("features", {}).get("enable_window_detection", True)
 
 # Image recognition confidence levels
-CONFIDENCE_CHALLENGE_START = 0.9  # Confidence for Challenge Again and Start buttons
-CONFIDENCE_CONTINUE_RETREAT = 0.8  # Confidence for Continue and Retreat buttons
-CONFIDENCE_WAVE8 = 0.99  # Confidence for Wave 8 detection
+CONFIDENCE_CHALLENGE_START = config.get("confidence", {}).get("challenge_start", 0.9)
+CONFIDENCE_CONTINUE_RETREAT = config.get("confidence", {}).get("continue_retreat", 0.8)
+CONFIDENCE_WAVE8 = config.get("confidence", {}).get("wave8", 0.99)
+
+# Window configuration
+WINDOW_TARGET_X = config.get("window", {}).get("target_x", 0)
+WINDOW_TARGET_Y = config.get("window", {}).get("target_y", 0)
+WINDOW_TARGET_WIDTH = config.get("window", {}).get("target_width", 1920)
+WINDOW_TARGET_HEIGHT = config.get("window", {}).get("target_height", 1080)
 
 # ============================================================================
 # INITIALIZATION
@@ -74,20 +112,12 @@ try:
 except ImportError:
     HAS_PLYER = False
 
-# Handle both script and PyInstaller executable paths
-if getattr(sys, 'frozen', False):
-    # Running as compiled executable (PyInstaller)
-    BASE_DIR = sys._MEIPASS
-else:
-    # Running as script
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
 CHALLENGE_PATH = os.path.join(BASE_DIR, "assets", "img", "challenge_again.png")
 START_PATH = os.path.join(BASE_DIR, "assets", "img", "start.png")
 CONTINUE_PATH = os.path.join(BASE_DIR, "assets", "img", "continue.png")
 RETREAT_PATH = os.path.join(BASE_DIR, "assets", "img", "retreat.png")
 WAVE6_PATH = os.path.join(BASE_DIR, "assets", "img", "wave_06.png")
-WAVE8_PATH = os.path.join(BASE_DIR, "assets", "img", "wave8.png")
+WAVE8_PATH = os.path.join(BASE_DIR, "assets", "img", "wave_8.png")
 
 # Hidden tkinter root for messageboxes
 root = tk.Tk()
@@ -97,6 +127,7 @@ root.withdraw()
 _stop_event = threading.Event()
 _worker_thread = None
 _worker_lock = threading.Lock()
+_locked_game_window = None  # Store the locked game window
 
 def press_keys_randomly():
     """Press W key randomly between MIN_KEY_PRESSES and MAX_KEY_PRESSES times, then D key the same.
@@ -208,68 +239,130 @@ def move_and_click(x, y):
     sys.stdout.flush()
     return False
 
+def find_and_lock_game_window():
+    """Find and lock the game window on startup. Returns True if found, False otherwise."""
+    global _locked_game_window
+    try:
+        windows = pgw.getWindowsWithTitle(app)
+        if windows:
+            _locked_game_window = windows[0]
+            print(f"DNA window found: {_locked_game_window.title}")
+            sys.stdout.flush()
+            return True
+        else:
+            print(f"Game window '{app}' not found. Please start the game and run this script again.")
+            sys.stdout.flush()
+            return False
+    except Exception as e:
+        print(f"Error finding game window: {str(e)}")
+        sys.stdout.flush()
+        return False
+
 def find_game_window():
-    """Find and activate the game window."""
+    """Find and activate the game window. Uses locked window if available."""
+    global _locked_game_window
+    
+    # If we have a locked window, use it and handle window management
+    if _locked_game_window is not None:
+        try:
+            # Refresh the window object to get current state
+            windows = pgw.getWindowsWithTitle(app)
+            if windows:
+                # Find the window that matches our locked window
+                for w in windows:
+                    if w.title == _locked_game_window.title or w._hWnd == getattr(_locked_game_window, '_hWnd', None):
+                        _locked_game_window = w  # Update reference
+                        break
+                else:
+                    _locked_game_window = windows[0]  # Fallback to first match
+            else:
+                # Window might have closed, try to find it again
+                _locked_game_window = None
+                return None
+        except Exception:
+            # If we can't refresh, try to find window again
+            try:
+                windows = pgw.getWindowsWithTitle(app)
+                if windows:
+                    _locked_game_window = windows[0]
+                else:
+                    _locked_game_window = None
+                    return None
+            except Exception:
+                return None
+        
+        game_window = _locked_game_window
+        
+        # Only perform window management if enabled
+        if ENABLE_WINDOW_DETECTION:
+            # Set window position and size if needed
+            target_x = WINDOW_TARGET_X
+            target_y = WINDOW_TARGET_Y
+            target_width = WINDOW_TARGET_WIDTH
+            target_height = WINDOW_TARGET_HEIGHT
+            
+            needs_resize = (game_window.width != target_width or game_window.height != target_height)
+            needs_reposition = (game_window.left != target_x or game_window.top != target_y)
+            
+            if needs_resize or needs_reposition:
+                try:
+                    print(f"Resizing window from {game_window.width}x{game_window.height} to {target_width}x{target_height}")
+                    print(f"Repositioning window from ({game_window.left}, {game_window.top}) to ({target_x}, {target_y})")
+                    sys.stdout.flush()
+                    game_window.resizeTo(target_width, target_height)
+                    game_window.moveTo(target_x, target_y)
+                    time.sleep(0.3)  # Give window time to resize/reposition
+                    print("Window resized and repositioned successfully")
+                    sys.stdout.flush()
+                except Exception as e:
+                    print(f"Error resizing/repositioning window: {e}")
+                    sys.stdout.flush()
+
+            # First check if game window is active
+            if not game_window.isActive:
+                print("Game is not the active window. Performing Alt+Tab once...")
+                sys.stdout.flush()
+                # Press Alt+Tab once
+                try:
+                    pag.keyDown('alt')
+                    pag.press('tab')
+                    pag.keyUp('alt')
+                except Exception as e:
+                    print(f"Error with PyAutoGUI Alt+Tab, using pynput fallback: {e}")
+                    sys.stdout.flush()
+                    # Fallback to pynput
+                    _keyboard_controller.press(Key.alt)
+                    _keyboard_controller.press(Key.tab)
+                    _keyboard_controller.release(Key.tab)
+                    _keyboard_controller.release(Key.alt)
+                time.sleep(0.3)  # Give window time to activate
+                
+                # Check if window is now active
+                if game_window.isActive:
+                    print("Successfully switched to game window")
+                    sys.stdout.flush()
+                    time.sleep(0.5)  # Let window settle
+                else:
+                    print("Game window is still not active after Alt+Tab")
+                    sys.stdout.flush()
+        else:
+            print("Window detection disabled. Skipping window management.")
+            sys.stdout.flush()
+        
+        return game_window
+    
+    # If no locked window, fall back to original behavior
     try:
         windows = pgw.getWindowsWithTitle(app)
         if windows:
             game_window = windows[0]
             print(f"Found game window: {game_window.title}")
-
-            # Only perform window management if enabled
-            if ENABLE_WINDOW_DETECTION:
-                # Set window position and size if needed
-                target_x = 0
-                target_y = 0
-                target_width = 1920
-                target_height = 1080
-                
-                needs_resize = (game_window.width != target_width or game_window.height != target_height)
-                needs_reposition = (game_window.left != target_x or game_window.top != target_y)
-                
-                if needs_resize or needs_reposition:
-                    try:
-                        print(f"Resizing window from {game_window.width}x{game_window.height} to {target_width}x{target_height}")
-                        print(f"Repositioning window from ({game_window.left}, {game_window.top}) to ({target_x}, {target_y})")
-                        game_window.resizeTo(target_width, target_height)
-                        game_window.moveTo(target_x, target_y)
-                        time.sleep(0.3)  # Give window time to resize/reposition
-                        print("Window resized and repositioned successfully")
-                    except Exception as e:
-                        print(f"Error resizing/repositioning window: {e}")
-                        sys.stdout.flush()
-
-                # First check if game window is active
-                if not game_window.isActive:
-                    print("Game is not the active window. Performing Alt+Tab once...")
-                    # Press Alt+Tab once
-                    try:
-                        pag.keyDown('alt')
-                        pag.press('tab')
-                        pag.keyUp('alt')
-                    except Exception as e:
-                        print(f"Error with PyAutoGUI Alt+Tab, using pynput fallback: {e}")
-                        sys.stdout.flush()
-                        # Fallback to pynput
-                        _keyboard_controller.press(Key.alt)
-                        _keyboard_controller.press(Key.tab)
-                        _keyboard_controller.release(Key.tab)
-                        _keyboard_controller.release(Key.alt)
-                    time.sleep(0.3)  # Give window time to activate
-                    
-                    # Check if window is now active
-                    if game_window.isActive:
-                        print("Successfully switched to game window")
-                        time.sleep(0.5)  # Let window settle
-                    else:
-                        print("Game window is still not active after Alt+Tab")
-            else:
-                print("Window detection disabled. Skipping window management.")
-            
+            sys.stdout.flush()
             return game_window
         return None
     except Exception as e:
         print(f"Error finding game window: {str(e)}")
+        sys.stdout.flush()
         return None
 
 def run_app(stop_event):
@@ -280,11 +373,19 @@ def run_app(stop_event):
         
         while not stop_event.is_set():
             try:
-                # Find and activate game window
+                # Use locked window if available
+                if _locked_game_window is None:
+                    print(f"Game window '{app}' not found. Waiting...")
+                    sys.stdout.flush()
+                    time.sleep(1.0)
+                    continue
+                
+                # Find and activate game window (uses locked window)
                 game_window = find_game_window()
                 
                 if not game_window:
                     print(f"Game window '{app}' not found. Waiting...")
+                    sys.stdout.flush()
                     time.sleep(1.0)
                     continue
                 
@@ -730,6 +831,14 @@ def on_press(key):
 if __name__ == "__main__":
     # Check for admin privileges first
     check_admin_privileges()
+    
+    # Find and lock the game window on startup
+    print("Searching for DNA game window...")
+    sys.stdout.flush()
+    if not find_and_lock_game_window():
+        print("Warning: Game window not found. The bot will wait for the window to appear.")
+        print("Please start the game and press F4 to start the bot.")
+        sys.stdout.flush()
     
     print("-" * 50)
     print("F4 toggles the bot on/off.")

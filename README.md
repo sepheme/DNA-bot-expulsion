@@ -97,22 +97,26 @@ pip install -r requirements.txt
 
 ## Configuration
 
-All configuration variables are located at the top of `main.py` (lines 14-37) for easy modification:
+All configuration variables are located in `config.json` for easy modification. The configuration file includes:
 
 ### Key Press Configuration
-- `MIN_KEY_PRESSES` / `MAX_KEY_PRESSES`: Range for random key presses (default: 15-25)
-- `MIN_KEY_DELAY` / `MAX_KEY_DELAY`: Delay between key presses in seconds (default: 0.1-0.3)
-- `MIN_KEY_HOLD_TIME` / `MAX_KEY_HOLD_TIME`: Time to hold each key down in seconds (default: 0.05-0.15)
+- `key_press.min_key_presses` / `key_press.max_key_presses`: Range for random key presses (default: 15-25)
+- `key_press.min_key_delay` / `key_press.max_key_delay`: Delay between key presses in seconds (default: 0.1-0.3)
+- `key_press.min_key_hold_time` / `key_press.max_key_hold_time`: Time to hold each key down in seconds (default: 0.05-0.15)
 
 ### Feature Flags
-- `ENABLE_RANDOM_KEY_PRESSES`: Enable random W/S key presses when buttons not found (default: `False`)
-- `ENABLE_NOTIFICATIONS`: Enable Windows toast notifications (default: `False`)
-- `ENABLE_WINDOW_DETECTION`: Enable automatic window detection, activation, and resizing (default: `False`)
+- `features.enable_random_key_presses`: Enable random W/S key presses when buttons not found (default: `true`)
+- `features.enable_notifications`: Enable Windows notifications (default: `true`)
+- `features.enable_window_detection`: Enable automatic window detection, activation, and resizing (default: `true`)
 
 ### Image Recognition Confidence
-- `CONFIDENCE_CHALLENGE_START`: Confidence for Challenge Again and Start buttons (default: `0.9`)
-- `CONFIDENCE_CONTINUE_RETREAT`: Confidence for Continue and Retreat buttons (default: `0.8`)
-- `CONFIDENCE_WAVE8`: Confidence for Wave 8 detection (default: `0.99`)
+- `confidence.challenge_start`: Confidence for Challenge Again and Start buttons (default: `0.9`)
+- `confidence.continue_retreat`: Confidence for Continue and Retreat buttons (default: `0.8`)
+- `confidence.wave8`: Confidence for Wave 8 detection (default: `0.99`)
+
+### Window Configuration
+- `window.target_x` / `window.target_y`: Target window position (default: 0, 0)
+- `window.target_width` / `window.target_height`: Target window size (default: 1920x1080)
 
 ## Required Assets
 
@@ -121,7 +125,7 @@ The bot requires image assets in the `assets/img/` directory:
 - `start.png` - Start button
 - `continue.png` - Continue button
 - `retreat.png` - Retreat button
-- `wave8.png` - Wave 8 indicator
+- `wave_8.png` - Wave 8 indicator
 - `wave_06.png` - Wave 6 indicator (optional)
 
 ## How It Works
