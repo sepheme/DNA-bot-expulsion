@@ -58,6 +58,9 @@ MAX_KEY_DELAY = config.get("key_press", {}).get("max_key_delay", 0.3)
 MIN_KEY_HOLD_TIME = config.get("key_press", {}).get("min_key_hold_time", 0.05)
 MAX_KEY_HOLD_TIME = config.get("key_press", {}).get("max_key_hold_time", 0.15)
 MOVEMENT_ARRAY = config.get("key_press", {}).get("movement_array", ["w", "a", "s", "d"])
+MOVEMENT_ARRAY_SEWERS = config.get("key_press", {}).get("movement_array_sewers", ["w", "s"])
+MOVEMENT_ARRAY_STAIRS = config.get("key_press", {}).get("movement_array_stairs", ["w", "a", "d"])
+MOVEMENT_ARRAY_ELEVATOR = config.get("key_press", {}).get("movement_array_elevator", ["w"])
 
 # Feature flags
 ENABLE_RANDOM_KEY_PRESSES = config.get("features", {}).get("enable_random_key_presses", True)
@@ -68,6 +71,7 @@ ENABLE_WINDOW_DETECTION = config.get("features", {}).get("enable_window_detectio
 CONFIDENCE_CHALLENGE_START = config.get("confidence", {}).get("challenge_start", 0.9)
 CONFIDENCE_CONTINUE_RETREAT = config.get("confidence", {}).get("continue_retreat", 0.8)
 CONFIDENCE_WAVE8 = config.get("confidence", {}).get("wave8", 0.99)
+CONFIDENCE_MAP_DETECTION = config.get("confidence", {}).get("map_detection", 0.8)
 
 # Window configuration
 WINDOW_TARGET_X = config.get("window", {}).get("target_x", 0)
@@ -113,12 +117,17 @@ try:
 except ImportError:
     HAS_PLYER = False
 
-CHALLENGE_PATH = os.path.join(BASE_DIR, "assets", "img", "challenge_again.png")
-START_PATH = os.path.join(BASE_DIR, "assets", "img", "start.png")
-CONTINUE_PATH = os.path.join(BASE_DIR, "assets", "img", "continue.png")
-RETREAT_PATH = os.path.join(BASE_DIR, "assets", "img", "retreat.png")
-WAVE6_PATH = os.path.join(BASE_DIR, "assets", "img", "wave_06.png")
-WAVE8_PATH = os.path.join(BASE_DIR, "assets", "img", "wave_8.png")
+CHALLENGE_PATH = os.path.join(BASE_DIR, "assets", "buttons", "challenge_again.png")
+START_PATH = os.path.join(BASE_DIR, "assets", "buttons", "start.png")
+CONTINUE_PATH = os.path.join(BASE_DIR, "assets", "buttons", "continue.png")
+RETREAT_PATH = os.path.join(BASE_DIR, "assets", "buttons", "retreat.png")
+WAVE6_PATH = os.path.join(BASE_DIR, "assets", "buttons", "wave_06.png")
+WAVE8_PATH = os.path.join(BASE_DIR, "assets", "buttons", "wave_8.png")
+
+# Map image paths
+SEWERS_PATH = os.path.join(BASE_DIR, "assets", "maps", "sewers.png")
+STAIRS_PATH = os.path.join(BASE_DIR, "assets", "maps", "stairs.png")
+ELEVATOR_PATH = os.path.join(BASE_DIR, "assets", "maps", "elevator.png")
 
 # Hidden tkinter root for messageboxes
 root = tk.Tk()
@@ -130,21 +139,93 @@ _worker_thread = None
 _worker_lock = threading.Lock()
 _locked_game_window = None  # Store the locked game window
 
+def detect_current_map():
+    """Detect which map is currently visible in the game window.
+    Returns: 'sewers', 'stairs', 'elevator', or None if no match found."""
+    if not _locked_game_window:
+        return None
+    
+    try:
+        # Check for sewers
+        try:
+            loc_sewers = pag.locateOnWindow(
+                SEWERS_PATH, app, confidence=CONFIDENCE_MAP_DETECTION, grayscale=True
+            )
+            if loc_sewers is not None:
+                print("Sewers map detected")
+                sys.stdout.flush()
+                return 'sewers'
+        except (pag.ImageNotFoundException, Exception):
+            pass
+        
+        # Check for stairs
+        try:
+            loc_stairs = pag.locateOnWindow(
+                STAIRS_PATH, app, confidence=CONFIDENCE_MAP_DETECTION, grayscale=True
+            )
+            if loc_stairs is not None:
+                print("Stairs map detected")
+                sys.stdout.flush()
+                return 'stairs'
+        except (pag.ImageNotFoundException, Exception):
+            pass
+        
+        # Check for elevator
+        try:
+            loc_elevator = pag.locateOnWindow(
+                ELEVATOR_PATH, app, confidence=CONFIDENCE_MAP_DETECTION, grayscale=True
+            )
+            if loc_elevator is not None:
+                print("Elevator map detected")
+                sys.stdout.flush()
+                return 'elevator'
+        except (pag.ImageNotFoundException, Exception):
+            pass
+        
+        return None
+    except Exception as e:
+        print(f"Error detecting map: {e}")
+        sys.stdout.flush()
+        return None
+
 def press_keys_randomly(stop_event=None):
     """Press keys from movement_array randomly between MIN_KEY_PRESSES and MAX_KEY_PRESSES times.
     Each key is held down for a random duration between MIN_KEY_HOLD_TIME and MAX_KEY_HOLD_TIME.
-    Can be interrupted immediately if stop_event is set."""
+    Can be interrupted immediately if stop_event is set.
+    Automatically detects current map and uses map-specific movement array if available."""
+    
+    # Detect current map and select appropriate movement array
+    current_map = detect_current_map()
+    movement_array_to_use = MOVEMENT_ARRAY  # Default movement array
+    
+    if current_map == 'sewers':
+        movement_array_to_use = MOVEMENT_ARRAY_SEWERS
+        print("Using sewers movement array")
+        sys.stdout.flush()
+    elif current_map == 'stairs':
+        movement_array_to_use = MOVEMENT_ARRAY_STAIRS
+        print("Using stairs movement array")
+        sys.stdout.flush()
+    elif current_map == 'elevator':
+        movement_array_to_use = MOVEMENT_ARRAY_ELEVATOR
+        print("Using elevator movement array")
+        sys.stdout.flush()
+    else:
+        print("No map detected, using default movement array")
+        sys.stdout.flush()
+    
     # Get random number of presses for each key in movement array
     key_press_counts = {}
-    for key in MOVEMENT_ARRAY:
+    for key in movement_array_to_use:
         key_press_counts[key] = random.randint(MIN_KEY_PRESSES, MAX_KEY_PRESSES)
     
     # Create notification message
-    key_list = ", ".join([f"{k.upper()}: {key_press_counts[k]}" for k in MOVEMENT_ARRAY])
-    notify("Pressing keys randomly", f"Keys: {key_list}")
+    key_list = ", ".join([f"{k.upper()}: {key_press_counts[k]}" for k in movement_array_to_use])
+    map_info = f" ({current_map})" if current_map else ""
+    notify("Pressing keys randomly", f"Keys: {key_list}{map_info}")
     
     # Press each key in the movement array
-    for key in MOVEMENT_ARRAY:
+    for key in movement_array_to_use:
         # Check if we should stop before processing each key
         if stop_event and stop_event.is_set():
             print("Key pressing interrupted by stop signal.")

@@ -37,6 +37,7 @@ Automated bot for Duet Night Abyss game that handles challenge loops, wave manag
 - **Challenge Loop Automation**: Automatically clicks "Challenge Again" and "Start" buttons
 - **Wave Management**: Intelligently handles Continue/Retreat based on wave detection (Wave 8)
 - **Random Key Presses**: Optional feature to press configurable movement keys (default: W, A, S, D) randomly when buttons are not found
+- **Map Detection**: Automatically detects current map (Sewers, Stairs, Elevator) and uses map-specific movement arrays for optimized navigation
 - **Windows Notifications**: Optional Windows toast notifications for bot status
 - **Keyboard Controls**: Press F4 to start/stop the bot instantly (can interrupt key pressing), Ctrl+C to exit
 - **Robust Mouse Control**: Uses fallback chain (pyautogui → pynput → pydirectinput) for reliable clicking
@@ -104,7 +105,10 @@ All configuration variables are located in `config.json` for easy modification. 
 - `key_press.min_key_presses` / `key_press.max_key_presses`: Range for random key presses (default: 15-25)
 - `key_press.min_key_delay` / `key_press.max_key_delay`: Delay between key presses in seconds (default: 0.1-0.3)
 - `key_press.min_key_hold_time` / `key_press.max_key_hold_time`: Time to hold each key down in seconds (default: 0.05-0.15)
-- `key_press.movement_array`: Array of keys to press randomly (default: `["w", "a", "s", "d"]`)
+- `key_press.movement_array`: Default array of keys to press randomly (default: `["w", "a", "s", "d"]`)
+- `key_press.movement_array_sewers`: Keys to press when Sewers map is detected (default: `["w", "s"]`)
+- `key_press.movement_array_stairs`: Keys to press when Stairs map is detected (default: `["w", "a", "d"]`)
+- `key_press.movement_array_elevator`: Keys to press when Elevator map is detected (default: `["w"]`)
 
 ### Feature Flags
 - `features.enable_random_key_presses`: Enable random key presses from movement_array when buttons not found (default: `true`)
@@ -115,6 +119,7 @@ All configuration variables are located in `config.json` for easy modification. 
 - `confidence.challenge_start`: Confidence for Challenge Again and Start buttons (default: `0.9`)
 - `confidence.continue_retreat`: Confidence for Continue and Retreat buttons (default: `0.8`)
 - `confidence.wave8`: Confidence for Wave 8 detection (default: `0.99`)
+- `confidence.map_detection`: Confidence for map detection (Sewers, Stairs, Elevator) (default: `0.8`)
 
 ### Window Configuration
 - `window.target_x` / `window.target_y`: Target window position (default: 0, 0)
@@ -122,13 +127,22 @@ All configuration variables are located in `config.json` for easy modification. 
 
 ## Required Assets
 
-The bot requires image assets in the `assets/img/` directory:
+The bot requires image assets in two directories:
+
+### Button Assets (`assets/buttons/`)
 - `challenge_again.png` - Challenge Again button
 - `start.png` - Start button
 - `continue.png` - Continue button
 - `retreat.png` - Retreat button
 - `wave_8.png` - Wave 8 indicator
 - `wave_06.png` - Wave 6 indicator (optional)
+
+### Map Assets (`assets/maps/`)
+- `sewers.png` - Sewers map identifier (for map detection)
+- `stairs.png` - Stairs map identifier (for map detection)
+- `elevator.png` - Elevator map identifier (for map detection)
+
+**Note**: Replace the placeholder map images with actual screenshots of the maps for accurate detection.
 
 ## How It Works
 
@@ -141,7 +155,11 @@ The bot requires image assets in the `assets/img/` directory:
    - First tries `pyautogui`
    - Falls back to `pynput.mouse` if pyautogui fails
    - Falls back to `pydirectinput` if pynput fails
-7. **Random Key Presses** (if enabled): When buttons are not found, presses keys from `movement_array` randomly (default: W, A, S, D)
+7. **Random Key Presses** (if enabled): When buttons are not found, detects current map and presses keys accordingly:
+   - Detects current map (Sewers, Stairs, Elevator) using image recognition
+   - Uses map-specific movement array if map is detected
+   - Falls back to default `movement_array` if no map is detected
+   - Example: Sewers map → uses `movement_array_sewers` (default: W, S)
 8. **Wave Logic**: 
    - Only checks for waves when both Continue and Retreat buttons are visible
    - If Wave 6 or Wave 8 is detected → clicks Retreat
@@ -224,9 +242,13 @@ If you're interested in collaborating and improving this project, feel free to m
 - **"config.json not found" error**: Ensure `config.json` is in the same directory as the executable or script
 - **Bot not finding game window**: Make sure the game is running before starting the bot. The bot locks onto the window at startup.
 - **Buttons not being clicked**: 
-  - Check that the image files in `assets/img/` match your game's UI
+  - Check that the image files in `assets/buttons/` match your game's UI
   - Try adjusting confidence levels in `config.json`
   - Check console logs to see which mouse click method is being used
+- **Map not being detected**: 
+  - Ensure map images in `assets/maps/` are actual screenshots, not placeholders
+  - Adjust `confidence.map_detection` in `config.json` if detection is too strict/loose
+  - Check console logs for map detection messages
 - **Window switching issues**: Ensure you have proper permissions and `enable_window_detection` is set to `true` in `config.json`
 - **Mouse clicks not working**: The bot uses a fallback chain - check console logs to see which method succeeded/failed
 - **Bot not stopping immediately**: Press F4 again - it should interrupt within a fraction of a second

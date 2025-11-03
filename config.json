@@ -7,7 +7,10 @@
     "max_key_delay": 0.3,
     "min_key_hold_time": 0.05,
     "max_key_hold_time": 0.15,
-    "movement_array": ["w", "a", "s", "d"]
+    "movement_array": ["w", "a", "s", "d"],
+    "movement_array_sewers": ["w", "s"],
+    "movement_array_stairs": ["w", "a", "d"],
+    "movement_array_elevator": ["w"]
   },
   "features": {
     "enable_random_key_presses": true,
@@ -17,7 +20,8 @@
   "confidence": {
     "challenge_start": 0.9,
     "continue_retreat": 0.8,
-    "wave8": 0.99
+    "wave8": 0.99,
+    "map_detection": 0.8
   },
   "window": {
     "target_x": 0,

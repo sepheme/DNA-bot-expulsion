@@ -58,7 +58,7 @@ After building, you can distribute:
 ## Troubleshooting
 
 If the executable doesn't work:
-1. Make sure all assets are included (check `assets/img/` folder exists)
+1. Make sure all assets are included (check `assets/buttons/` folder exists)
 2. Run from command line to see error messages:
    ```bash
    DNA-Bot-Expulsion.exe
