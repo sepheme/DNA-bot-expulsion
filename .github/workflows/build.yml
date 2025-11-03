@@ -9,6 +9,9 @@ on:
 jobs:
   build-and-release:
     runs-on: windows-latest
+    permissions:
+      contents: write  # Required to create releases
+      actions: read    # Required to read workflow status
     
     steps:
     - name: Checkout code
