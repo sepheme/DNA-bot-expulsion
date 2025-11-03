@@ -4,14 +4,20 @@ import PyInstaller.utils.hooks as hooks
 
 block_cipher = None
 
-# Collect all win10toast data files
-win10toast_datas = hooks.collect_all('win10toast')
+# Collect win10toast data files
+try:
+    win10toast_datas = hooks.collect_data_files('win10toast')
+    # Ensure it's a list
+    if not isinstance(win10toast_datas, list):
+        win10toast_datas = list(win10toast_datas) if win10toast_datas else []
+except Exception:
+    win10toast_datas = []
 
 a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('assets', 'assets'), ('config.json', '.')] + win10toast_datas[1],
+    datas=[('assets', 'assets'), ('config.json', '.')] + win10toast_datas,
     hiddenimports=[
         'win10toast',
         'pynput.keyboard',
@@ -21,7 +27,7 @@ a = Analysis(
         'tkinter',
         'win10toast.toast',
         'pydirectinput',
-    ] + win10toast_datas[0],
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
