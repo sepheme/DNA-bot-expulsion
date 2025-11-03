@@ -2,6 +2,7 @@ import pyautogui as pag
 import pygetwindow as pgw
 import time
 import os
+import sys
 import threading
 import tkinter as tk
 from tkinter import messagebox
@@ -10,21 +11,56 @@ import pytesseract
 from PIL import ImageGrab, ImageFilter
 import numpy as np
 
-# Tesseract Setup
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+# Tesseract Setup - dynamically detect path for bundled or standalone execution
+if getattr(sys, 'frozen', False):
+    # Running as compiled executable (PyInstaller)
+    base_path = sys._MEIPASS
+    bundled_tesseract = os.path.join(base_path, 'Tesseract-OCR', 'tesseract.exe')
+    bundled_tessdata = os.path.join(base_path, 'Tesseract-OCR', 'tessdata')
+    if os.path.exists(bundled_tesseract):
+        pytesseract.pytesseract.tesseract_cmd = bundled_tesseract
+        # Set TESSDATA_PREFIX so Tesseract can find language data files
+        if os.path.exists(bundled_tessdata):
+            os.environ['TESSDATA_PREFIX'] = os.path.dirname(bundled_tesseract)
+        print(f"Using bundled Tesseract: {bundled_tesseract}")
+    else:
+        # Fallback to system installation if bundled version not found
+        default_path = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+        if os.path.exists(default_path):
+            pytesseract.pytesseract.tesseract_cmd = default_path
+        else:
+            print("WARNING: Tesseract OCR not found in bundle or system installation!")
+else:
+    # Running as script - use system installation
+    # Try common installation paths
+    possible_paths = [
+        r'C:\Program Files\Tesseract-OCR\tesseract.exe',
+        r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
+    ]
+    tesseract_found = False
+    for path in possible_paths:
+        if os.path.exists(path):
+            pytesseract.pytesseract.tesseract_cmd = path
+            tesseract_found = True
+            break
+    if not tesseract_found:
+        print("WARNING: Tesseract OCR not found in common installation paths.")
+        print("Please ensure Tesseract is installed or update the path in main.py")
 
 # Configuration
 CONFIDENCE = 0.6  # Confidence level for image detection (0.0 to 1.0, higher = more exact match)
 app = "Duet Night Abyss  "
 
-# Paths
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Paths - handle both frozen executable and script execution
+if getattr(sys, 'frozen', False):
+    # Running as compiled executable (PyInstaller)
+    BASE_DIR = sys._MEIPASS
+else:
+    # Running as script
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 CHALLENGE_PATH = os.path.join(BASE_DIR, "assets", "img", "challenge_again.png")
 START_PATH = os.path.join(BASE_DIR, "assets", "img", "start.png")
-
-# Window info
-allTitles = pgw.getAllTitles()
-allWindows = pgw.getAllWindows()
 
 # Hidden tkinter root for messageboxes
 root = tk.Tk()
@@ -47,29 +83,21 @@ def run_app(stop_event):
                 game_window = windows[0]
                 print(f"Found game window: {game_window.title}")
 
-                # Check if game window is active
+                # First check if game window is active
                 if not game_window.isActive:
-                    print("Game is not the active window. Alt+Tabbing to find it...")
-                    max_attempts = 10  # Maximum number of Alt+Tab attempts
+                    print("Game is not the active window. Performing Alt+Tab once...")
+                    # Press Alt+Tab once
+                    pag.keyDown('alt')
+                    pag.press('tab')
+                    pag.keyUp('alt')
+                    time.sleep(0.3)  # Give window time to activate
                     
-                    for attempt in range(max_attempts):
-                        # Press Alt+Tab
-                        pag.keyDown('alt')
-                        pag.press('tab')
-                        time.sleep(0.1)  # Small delay between tab presses
-                        
-                        # Check if we found the game window
-                        if game_window.isActive:
-                            pag.keyUp('alt')
-                            print("Successfully switched to game window")
-                            time.sleep(0.5)  # Let window settle
-                            break
-                    
-                    # Release alt key if we didn't find the window
-                    if not game_window.isActive:
-                        pag.keyUp('alt')
-                        print("Could not find game window after Alt+Tabbing")
-                        time.sleep(1.0)
+                    # Check if window is now active
+                    if game_window.isActive:
+                        print("Successfully switched to game window")
+                        time.sleep(0.5)  # Let window settle
+                    else:
+                        print("Game window is still not active after Alt+Tab")
                 
                 return game_window
             return None
@@ -107,7 +135,22 @@ def run_app(stop_event):
                 crop_box = (left_x, top_y, right_x, bottom_y)
                 screenshot = screenshot.crop(crop_box)
             # screenshot = screenshot.filter(ImageFilter.MedianFilter(size=3))
-            screenshot.save(f"assets\img\{text_to_find}.png")
+            # Save screenshot for debugging (optional - saves to executable directory when frozen)
+            try:
+                if getattr(sys, 'frozen', False):
+                    # When frozen, save to directory where executable is located
+                    exe_dir = os.path.dirname(sys.executable)
+                    debug_dir = os.path.join(exe_dir, "debug_screenshots")
+                else:
+                    # When running as script, save to assets/img/debug
+                    debug_dir = os.path.join(BASE_DIR, "assets", "img", "debug")
+                os.makedirs(debug_dir, exist_ok=True)
+                debug_path = os.path.join(debug_dir, f"{text_to_find}_{int(time.time())}.png")
+                screenshot.save(debug_path)
+            except Exception:
+                # Non-critical - continue even if screenshot save fails
+                pass
+            
             text = pytesseract.image_to_string(screenshot)
             
             if text_to_find.lower() in text.lower():
@@ -170,7 +213,11 @@ def run_app(stop_event):
             if start_clicked:
                 print("Start text clicked, waiting for next cycle...")
                 time.sleep(1.75)
-                
+            
+            # Small delay between iterations to prevent CPU spinning
+            if not challenge_clicked and not start_clicked:
+                time.sleep(0.5)
+            
         except Exception as e:
             print(f"Error in bot loop: {e}")
             time.sleep(1.0)
@@ -232,6 +279,16 @@ if __name__ == "__main__":
     print("F4 toggles the bot on/off.")
     print("Press Ctrl+C to exit")
     print("-" * 50)
+    
+    # Validate Tesseract is accessible
+    try:
+        tesseract_version = pytesseract.get_tesseract_version()
+        print(f"Tesseract OCR version: {tesseract_version}")
+    except Exception as e:
+        print(f"ERROR: Tesseract OCR is not accessible: {e}")
+        print("Please ensure Tesseract is installed and the path is correct.")
+        print("The bot may not work correctly without Tesseract OCR.")
+        print("-" * 50)
 
     # Start global keyboard listener in background and block main thread on join
     listener = Listener(on_press=on_press)
