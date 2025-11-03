@@ -164,6 +164,14 @@ The executable will be created in the `dist/` directory.
 - On Windows, administrator privileges are required for mouse/keyboard simulation
 - Mouse clicking uses a fallback chain to ensure reliability across different systems
 
+## Known Issues
+
+- **Stuck enemies**: Due to unpredictable spawn locations, enemies may sometimes get stuck, requiring human intervention to resolve.
+
+## Contributing
+
+If you're interested in collaborating and improving this project, feel free to make a PR (Pull Request)! Contributions are welcome.
+
 ## Troubleshooting
 
 - **"Administrator privileges are required" error**: Run the script/executable as Administrator on Windows

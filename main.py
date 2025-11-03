@@ -290,9 +290,13 @@ def run_app(stop_event):
                 
                 os.system("cls" if os.name == 'nt' else "clear")
                 
-                # Check both buttons first
+                # Check all buttons: Challenge Again, Start, Continue, Retreat, and Waves (if applicable)
                 loc_CA = None
                 loc_START = None
+                loc_CONTINUE = None
+                loc_RETREAT = None
+                loc_WAVE6 = None
+                loc_WAVE8 = None
                 
                 print("Checking for Challenge Again button...")
                 sys.stdout.flush()
@@ -314,7 +318,7 @@ def run_app(stop_event):
                     print(f"Error locating Challenge Again: {e}")
                     sys.stdout.flush()
                 
-                time.sleep(1.00)
+                time.sleep(0.5)
                 
                 print("Checking for Start button...")
                 sys.stdout.flush()
@@ -336,7 +340,96 @@ def run_app(stop_event):
                     print(f"Error locating Start: {e}")
                     sys.stdout.flush()
                 
-                # Click buttons if found
+                time.sleep(0.5)
+                
+                print("Checking for Continue button...")
+                sys.stdout.flush()
+                notify("Checking screen", "Looking for Continue button...")
+                try:
+                    loc_CONTINUE = pag.locateOnWindow(
+                        CONTINUE_PATH, app, confidence=CONFIDENCE_CONTINUE_RETREAT, grayscale=True
+                    )
+                    if loc_CONTINUE is not None:
+                        print(f"Continue button found at ({loc_CONTINUE[0]}, {loc_CONTINUE[1]})")
+                        sys.stdout.flush()
+                    else:
+                        print("Continue button not found on screen")
+                        sys.stdout.flush()
+                except pag.ImageNotFoundException:
+                    print("Continue button not found (ImageNotFoundException)")
+                    sys.stdout.flush()
+                except Exception as e:
+                    print(f"Error locating Continue: {e}")
+                    sys.stdout.flush()
+                
+                time.sleep(0.5)
+                
+                # Check for Retreat button
+                try:
+                    loc_RETREAT = pag.locateOnWindow(
+                        RETREAT_PATH, app, confidence=CONFIDENCE_CONTINUE_RETREAT, grayscale=True
+                    )
+                    if loc_RETREAT is not None:
+                        print(f"Retreat button found at ({loc_RETREAT[0]}, {loc_RETREAT[1]})")
+                        sys.stdout.flush()
+                    else:
+                        print("Retreat button not found on screen")
+                        sys.stdout.flush()
+                except pag.ImageNotFoundException:
+                    print("Retreat button not found (ImageNotFoundException)")
+                    sys.stdout.flush()
+                except Exception as e:
+                    print(f"Error locating Retreat: {e}")
+                    sys.stdout.flush()
+                
+                # Only check for Wave6 and Wave8 if both Continue and Retreat buttons are visible
+                loc_WAVE6 = None
+                loc_WAVE8 = None
+                if loc_CONTINUE is not None and loc_RETREAT is not None:
+                    print("Both Continue and Retreat buttons found. Checking for wave indicators...")
+                    sys.stdout.flush()
+                    time.sleep(0.5)
+                    
+                    # Check for Wave6
+                    try:
+                        loc_WAVE6 = pag.locateOnWindow(
+                            WAVE6_PATH, app, confidence=CONFIDENCE_WAVE8, grayscale=True
+                        )
+                        if loc_WAVE6 is not None:
+                            print(f"Wave 6 detected")
+                            sys.stdout.flush()
+                        else:
+                            print("Wave 6 not detected")
+                            sys.stdout.flush()
+                    except pag.ImageNotFoundException:
+                        print("Wave 6 not detected (ImageNotFoundException)")
+                        sys.stdout.flush()
+                    except Exception as e:
+                        print(f"Error locating Wave6: {e}")
+                        sys.stdout.flush()
+                    
+                    # Check for Wave8
+                    try:
+                        loc_WAVE8 = pag.locateOnWindow(
+                            WAVE8_PATH, app, confidence=CONFIDENCE_WAVE8, grayscale=True
+                        )
+                        if loc_WAVE8 is not None:
+                            print(f"Wave 8 detected")
+                            sys.stdout.flush()
+                        else:
+                            print("Wave 8 not detected")
+                            sys.stdout.flush()
+                    except pag.ImageNotFoundException:
+                        print("Wave 8 not detected (ImageNotFoundException)")
+                        sys.stdout.flush()
+                    except Exception as e:
+                        print(f"Error locating Wave8: {e}")
+                        sys.stdout.flush()
+                else:
+                    print("Continue or Retreat button not found. Skipping wave detection.")
+                    sys.stdout.flush()
+                
+                # Click Challenge Again button if found
                 if loc_CA is not None:
                     # Convert window-relative coordinates to absolute screen coordinates
                     absolute_x = game_window.left + loc_CA[0] + 50
@@ -350,6 +443,7 @@ def run_app(stop_event):
                         print("Failed to click Challenge Again button")
                         sys.stdout.flush()
                 
+                # Click Start button if found
                 if loc_START is not None:
                     # Convert window-relative coordinates to absolute screen coordinates
                     absolute_x = game_window.left + loc_START[0] + 50
@@ -363,18 +457,58 @@ def run_app(stop_event):
                         print("Failed to click Start button")
                         sys.stdout.flush()
                 
-                # Only press keys randomly if BOTH buttons are not found and flag is enabled
-                if loc_CA is None and loc_START is None:
+                # Handle Continue/Retreat logic (wave looping)
+                # Only process wave logic if both Continue and Retreat buttons are visible
+                if loc_CONTINUE is not None and loc_RETREAT is not None:
+                    # Check if Wave6 or Wave8 is detected
+                    if loc_WAVE6 is not None or loc_WAVE8 is not None:
+                        # Wave6 or Wave8 detected, click Retreat
+                        absolute_x = game_window.left + loc_RETREAT[0] + 50
+                        absolute_y = game_window.top + loc_RETREAT[1] + 25
+                        print(f"Moving to absolute position: ({absolute_x}, {absolute_y})")
+                        sys.stdout.flush()
+                        if move_and_click(absolute_x, absolute_y):
+                            print("Retreat button clicked (Wave6 or Wave8 detected)")
+                            sys.stdout.flush()
+                        else:
+                            print("Failed to click Retreat button")
+                            sys.stdout.flush()
+                    else:
+                        # No wave detected, click Continue
+                        absolute_x = game_window.left + loc_CONTINUE[0] + 50
+                        absolute_y = game_window.top + loc_CONTINUE[1] + 25
+                        print(f"Moving to absolute position: ({absolute_x}, {absolute_y})")
+                        sys.stdout.flush()
+                        if move_and_click(absolute_x, absolute_y):
+                            print("Continue button clicked (no wave detected)")
+                            sys.stdout.flush()
+                        else:
+                            print("Failed to click Continue button")
+                            sys.stdout.flush()
+                elif loc_CONTINUE is not None:
+                    # Only Continue button is visible (no Retreat), click it
+                    absolute_x = game_window.left + loc_CONTINUE[0] + 50
+                    absolute_y = game_window.top + loc_CONTINUE[1] + 25
+                    print(f"Moving to absolute position: ({absolute_x}, {absolute_y})")
+                    sys.stdout.flush()
+                    if move_and_click(absolute_x, absolute_y):
+                        print("Continue button clicked")
+                        sys.stdout.flush()
+                    else:
+                        print("Failed to click Continue button")
+                        sys.stdout.flush()
+                
+                # Only press keys randomly if NONE of Challenge Again, Start, or Continue are found
+                if loc_CA is None and loc_START is None and loc_CONTINUE is None:
                     if ENABLE_RANDOM_KEY_PRESSES:
-                        print("Both Challenge Again and Start buttons not found. Pressing keys randomly...")
+                        print("Challenge Again, Start, and Continue buttons not found. Pressing keys randomly...")
                         sys.stdout.flush()
                         press_keys_randomly()
                     else:
-                        print("Both Challenge Again and Start buttons not found. Random key presses disabled.")
+                        print("Challenge Again, Start, and Continue buttons not found. Random key presses disabled.")
                         sys.stdout.flush()
                 
                 time.sleep(1.00)
-                wave_looping(game_window)
                 
                 # Small delay between iterations to prevent CPU spinning
                 time.sleep(0.5)
