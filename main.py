@@ -58,6 +58,7 @@ def find_game_window():
 def run_app(stop_event):
     """Main bot loop running in a background thread. Exits when stop_event is set."""
     print("Bot thread started.")
+    print(f"Stop event status: {stop_event.is_set()}")  # Debug
     
     while not stop_event.is_set():
         try:
@@ -165,7 +166,9 @@ def notify(message, title="Application Notification"):
 def on_press(key):
     """Toggle bot on F4 press."""
     try:
+        print(f"Key pressed: {key}")  # Debug: print all key presses
         if key == Key.f4:
+            print("F4 detected!")  # Debug: confirm F4 was detected
             # Toggle start/stop
             started = start_bot()
             if started:
@@ -181,16 +184,27 @@ def on_press(key):
                     notify("Bot is already running or stopping. Press F4 again to toggle.")
     except Exception as e:
         print(f"Keyboard handler error: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
     print("-" * 50)
     print("F4 toggles the bot on/off.")
     print("Press Ctrl+C to exit")
     print("-" * 50)
+    print("Listening for keyboard input...")
     
     # Start global keyboard listener in background and block main thread on join
-    listener = Listener(on_press=on_press)
-    listener.start()
+    try:
+        listener = Listener(on_press=on_press)
+        listener.start()
+        print("Keyboard listener started successfully!")
+    except Exception as e:
+        print(f"ERROR: Failed to start keyboard listener: {e}")
+        import traceback
+        traceback.print_exc()
+        print("\nNote: On macOS, you may need to grant accessibility permissions.")
+        print("Go to System Preferences > Security & Privacy > Privacy > Accessibility")
     
     try:
         # Keep the main thread alive
@@ -201,5 +215,6 @@ if __name__ == "__main__":
         # Stop the bot if it's running
         stop_bot()
         # Stop the keyboard listener
-        listener.stop()
+        if 'listener' in locals():
+            listener.stop()
         print("Cleanup complete. Exiting...")
