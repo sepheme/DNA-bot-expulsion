@@ -2,6 +2,10 @@
 
 Automated bot for Duet Night Abyss game that handles challenge loops, wave management, and window switching.
 
+[![Latest Release](https://img.shields.io/github/v/release/sepheme/DNA-bot-expulsion?label=Latest%20Release&style=for-the-badge)](https://github.com/sepheme/DNA-bot-expulsion/releases/latest)
+
+**Download the latest executable:** [Latest Release](https://github.com/sepheme/DNA-bot-expulsion/releases/latest)
+
 ## Features
 
 - **Automatic Window Detection**: Automatically finds and switches to the game window using Alt+Tab (optional, configurable)
@@ -105,17 +109,33 @@ The bot requires image assets in the `assets/img/` directory:
 
 ### Download Pre-built Executable (Recommended)
 
-The project includes GitHub Actions that can build Windows executables:
+**Option 1: Download from Releases (Recommended)**
+
+The easiest way to get the latest executable is from the [Releases](https://github.com/sepheme/DNA-bot-expulsion/releases/latest) page:
+
+1. Go to the [Latest Release](https://github.com/sepheme/DNA-bot-expulsion/releases/latest) page
+2. Download the `DNA-<timestamp>.exe` file from the assets section
+3. Right-click and select "Run as administrator"
+
+Releases are automatically created when version tags (e.g., `v1.0.0`) are pushed to the repository.
+
+**Option 2: Build via GitHub Actions**
+
+You can also manually trigger a build via GitHub Actions:
 
 1. Go to the **Actions** tab in the GitHub repository
-2. Select the **Build Windows Executable** workflow
+2. Select the **Build Windows Executable and Release** workflow
 3. Click **Run workflow** button (on the right side)
 4. Select the branch (usually `main` or `master`)
 5. Click **Run workflow** to start the build
 6. Once the workflow completes, scroll down to **Artifacts**
-7. Download `DNA-Bot-Expulsion-Windows` which contains `DNA-Bot-Expulsion.exe`
+7. Download the executable from the artifacts
 
-The workflow must be manually triggered from the Actions tab.
+**Note:** To create a release, push a version tag (e.g., `v1.0.0`):
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
 
 ### Build Locally
 
