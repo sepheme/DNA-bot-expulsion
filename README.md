@@ -6,13 +6,37 @@ Automated bot for Duet Night Abyss game that handles challenge loops, wave manag
 
 **Download the latest executable:** [Latest Release](https://github.com/sepheme/DNA-bot-expulsion/releases/latest)
 
+## Table of Contents
+
+- [Features](#features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Usage](#usage)
+  - [Windows](#windows)
+  - [Running the Bot](#running-the-bot)
+- [Configuration](#configuration)
+  - [Key Press Configuration](#key-press-configuration)
+  - [Feature Flags](#feature-flags)
+  - [Image Recognition Confidence](#image-recognition-confidence)
+- [Required Assets](#required-assets)
+- [How It Works](#how-it-works)
+- [Building Executable](#building-executable)
+  - [Download Pre-built Executable (Recommended)](#download-pre-built-executable-recommended)
+  - [Build Locally](#build-locally)
+- [Notes](#notes)
+- [Known Issues](#known-issues)
+- [Contributing](#contributing)
+- [Troubleshooting](#troubleshooting)
+- [Dependencies](#dependencies)
+- [License](#license)
+
 ## Features
 
 - **Automatic Window Detection**: Automatically finds and switches to the game window using Alt+Tab (optional, configurable)
 - **Window Management**: Automatically resizes and repositions game window to 1920x1080 at (0,0) (optional, configurable)
 - **Challenge Loop Automation**: Automatically clicks "Challenge Again" and "Start" buttons
 - **Wave Management**: Intelligently handles Continue/Retreat based on wave detection (Wave 8)
-- **Random Key Presses**: Optional feature to press W and D keys randomly when buttons are not found
+- **Random Key Presses**: Optional feature to press W and S keys randomly when buttons are not found
 - **Windows Notifications**: Optional Windows toast notifications for bot status
 - **Keyboard Controls**: Press F4 to start/stop the bot, Ctrl+C to exit
 - **Robust Mouse Control**: Uses fallback chain (pyautogui → pynput → pydirectinput) for reliable clicking
@@ -49,14 +73,26 @@ pip install -r requirements.txt
 
 ### Running the Bot
 
-1. Make sure the game "Duet Night Abyss" is running
-2. Run the bot:
-```bash
-python main.py
-```
+**Step-by-step instructions:**
 
-3. **Controls**:
-   - Press **F4** to start/stop the bot
+1. **First, run the EXE** (executable file):
+   - Right-click on the downloaded executable
+   - Select "Run as administrator"
+   - The bot will start and wait for keyboard input
+
+2. **Then, run DNA** (Duet Night Abyss game):
+   - Launch the game normally
+
+3. **Navigate to combat and choose commissions**:
+   - Go to Combat section in the game
+   - Select commissions that are infinite and can be AFK farmable:
+     - **Expulsion** for Demon Wedge Farming
+     - **Exploration** (with minimal human intervention at the start)
+   - Enter the selected commission
+
+4. **Once in the commission, control the bot**:
+   - Press **F4** to start the bot
+   - Press **F4** again to stop the bot
    - Press **Ctrl+C** to exit the program
 
 ## Configuration
@@ -69,7 +105,7 @@ All configuration variables are located at the top of `main.py` (lines 14-37) fo
 - `MIN_KEY_HOLD_TIME` / `MAX_KEY_HOLD_TIME`: Time to hold each key down in seconds (default: 0.05-0.15)
 
 ### Feature Flags
-- `ENABLE_RANDOM_KEY_PRESSES`: Enable random W/D key presses when buttons not found (default: `False`)
+- `ENABLE_RANDOM_KEY_PRESSES`: Enable random W/S key presses when buttons not found (default: `False`)
 - `ENABLE_NOTIFICATIONS`: Enable Windows toast notifications (default: `False`)
 - `ENABLE_WINDOW_DETECTION`: Enable automatic window detection, activation, and resizing (default: `False`)
 
@@ -99,7 +135,7 @@ The bot requires image assets in the `assets/img/` directory:
    - First tries `pyautogui`
    - Falls back to `pynput.mouse` if pyautogui fails
    - Falls back to `pydirectinput` if pynput fails
-7. **Random Key Presses** (if enabled): When buttons are not found, presses W and D keys randomly
+7. **Random Key Presses** (if enabled): When buttons are not found, presses W and S keys randomly
 8. **Wave Logic**: 
    - If Wave 8 is detected → clicks Retreat
    - If Wave 8 is not detected → clicks Continue
