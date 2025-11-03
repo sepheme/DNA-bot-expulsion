@@ -131,17 +131,27 @@ def run_app(stop_event):
                 
                 os.system("cls" if os.name == 'nt' else "clear")
                 
+                print("Checking for Challenge Again button...")
+                sys.stdout.flush()
                 try:
                     loc_CA = pag.locateOnWindow(
                         CHALLENGE_PATH, app, confidence=CONFIDENCE_CHALLENGE_START, grayscale=True
                     )
                     if loc_CA is not None:
+                        print(f"Challenge Again button found at ({loc_CA[0]}, {loc_CA[1]})")
+                        sys.stdout.flush()
                         pag.moveTo(loc_CA[0] + 50, loc_CA[1] + 25)
                         pag.click()
+                        print("Challenge Again button clicked")
+                        sys.stdout.flush()
                     else:
+                        print("Challenge Again button not found on screen")
+                        sys.stdout.flush()
                         # Button not found, press keys randomly
                         press_keys_randomly()
                 except pag.ImageNotFoundException:
+                    print("Challenge Again button not found (ImageNotFoundException)")
+                    sys.stdout.flush()
                     # Button not found, press keys randomly
                     press_keys_randomly()
                 except Exception as e:
@@ -150,17 +160,27 @@ def run_app(stop_event):
                 
                 time.sleep(1.00)
                 
+                print("Checking for Start button...")
+                sys.stdout.flush()
                 try:
                     loc_START = pag.locateOnWindow(
                         START_PATH, app, confidence=CONFIDENCE_CHALLENGE_START, grayscale=True
                     )
                     if loc_START is not None:
+                        print(f"Start button found at ({loc_START[0]}, {loc_START[1]})")
+                        sys.stdout.flush()
                         pag.moveTo(loc_START[0] + 50, loc_START[1] + 25)
                         pag.click()
+                        print("Start button clicked")
+                        sys.stdout.flush()
                     else:
+                        print("Start button not found on screen")
+                        sys.stdout.flush()
                         # Button not found, press keys randomly
                         press_keys_randomly()
                 except pag.ImageNotFoundException:
+                    print("Start button not found (ImageNotFoundException)")
+                    sys.stdout.flush()
                     # Button not found, press keys randomly
                     press_keys_randomly()
                 except Exception as e:
@@ -294,7 +314,14 @@ def notify(message, title="Application Notification"):
 def on_press(key):
     """Toggle bot on F4 press."""
     try:
+        # Log all key presses
+        key_str = str(key).replace("'", "")
+        print(f"[Key Listener] Key pressed: {key_str}")
+        sys.stdout.flush()
+        
         if key == Key.f4:
+            print("[Key Listener] F4 detected!")
+            sys.stdout.flush()
             # Toggle start/stop
             started = start_bot()
             if started:
