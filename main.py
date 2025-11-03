@@ -23,6 +23,8 @@ MIN_KEY_PRESSES = 15  # Minimum number of key presses for W and D keys
 MAX_KEY_PRESSES = 25  # Maximum number of key presses for W and D keys
 MIN_KEY_DELAY = 0.1  # Minimum delay between key presses (seconds)
 MAX_KEY_DELAY = 0.3  # Maximum delay between key presses (seconds)
+MIN_KEY_HOLD_TIME = 0.05  # Minimum time to hold each key down (seconds)
+MAX_KEY_HOLD_TIME = 0.15  # Maximum time to hold each key down (seconds)
 CONFIDENCE_CHALLENGE_START = 0.9  # Confidence for Challenge Again and Start buttons
 CONFIDENCE_CONTINUE_RETREAT = 0.8  # Confidence for Continue and Retreat buttons
 CONFIDENCE_WAVE8 = 0.99  # Confidence for Wave 8 detection
@@ -37,20 +39,25 @@ _worker_thread = None
 _worker_lock = threading.Lock()
 
 def press_keys_randomly():
-    """Press W key randomly between MIN_KEY_PRESSES and MAX_KEY_PRESSES times, then D key the same."""
+    """Press W key randomly between MIN_KEY_PRESSES and MAX_KEY_PRESSES times, then D key the same.
+    Each key is held down for a random duration between MIN_KEY_HOLD_TIME and MAX_KEY_HOLD_TIME."""
     w_presses = random.randint(MIN_KEY_PRESSES, MAX_KEY_PRESSES)
     d_presses = random.randint(MIN_KEY_PRESSES, MAX_KEY_PRESSES)
     
     print(f"Pressing W key {w_presses} times...")
     sys.stdout.flush()
     for _ in range(w_presses):
-        pag.press('w')
+        pag.keyDown('w')
+        time.sleep(random.uniform(MIN_KEY_HOLD_TIME, MAX_KEY_HOLD_TIME))
+        pag.keyUp('w')
         time.sleep(random.uniform(MIN_KEY_DELAY, MAX_KEY_DELAY))
     
     print(f"Pressing D key {d_presses} times...")
     sys.stdout.flush()
     for _ in range(d_presses):
-        pag.press('d')
+        pag.keyDown('d')
+        time.sleep(random.uniform(MIN_KEY_HOLD_TIME, MAX_KEY_HOLD_TIME))
+        pag.keyUp('d')
         time.sleep(random.uniform(MIN_KEY_DELAY, MAX_KEY_DELAY))
     
     print("Key presses completed.")
