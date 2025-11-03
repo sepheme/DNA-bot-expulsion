@@ -58,23 +58,11 @@ def find_game_window():
 
 def run_app(stop_event):
     """Main bot loop running in a background thread. Exits when stop_event is set."""
-    # CRITICAL: Print immediately to verify function is called
-    print("\n" + "=" * 50)
-    print(">>> run_app() FUNCTION CALLED! <<<")
-    print("=" * 50)
-    sys.stdout.flush()
-    
     try:
         print("Bot thread started.")
-        print(f"Stop event status: {stop_event.is_set()}")  # Debug
-        print(f"Thread ID: {threading.current_thread().ident}")
         sys.stdout.flush()
         
-        iteration = 0
         while not stop_event.is_set():
-            iteration += 1
-            print(f"[Iteration {iteration}] Starting loop...")
-            sys.stdout.flush()
             try:
                 # Find and activate game window
                 game_window = find_game_window()
@@ -85,74 +73,37 @@ def run_app(stop_event):
                     continue
                 
                 os.system("cls" if os.name == 'nt' else "clear")
-                print("App is running.")
-                sys.stdout.flush()
-                
-                print(f"Looking for Challenge Again button at: {CHALLENGE_PATH}")
-                print(f"File exists: {os.path.exists(CHALLENGE_PATH)}")
-                sys.stdout.flush()
                 
                 try:
-                    print("Attempting to locate Challenge Again button...")
-                    sys.stdout.flush()
                     loc_CA = pag.locateOnWindow(
                         CHALLENGE_PATH, app, confidence=0.9, grayscale=True
                     )
-                    print(f"Challenge Again location: {loc_CA}")
-                    sys.stdout.flush()
                     if loc_CA is not None:
-                        print(f"Clicking Challenge Again at {loc_CA[0] + 50}, {loc_CA[1] + 25}")
-                        sys.stdout.flush()
                         pag.moveTo(loc_CA[0] + 50, loc_CA[1] + 25)
                         pag.click()
-                except pag.ImageNotFoundException as e:
-                    print(f"Challenge Again button not found: {e}")
-                    sys.stdout.flush()
+                except pag.ImageNotFoundException:
+                    pass
                 except Exception as e:
-                    print(f"Error locating Challenge Again: {type(e).__name__}: {e}")
-                    import traceback
-                    traceback.print_exc()
+                    print(f"Error locating Challenge Again: {e}")
                     sys.stdout.flush()
                 
-                print("Sleeping 1 second...")
-                sys.stdout.flush()
                 time.sleep(1.00)
                 
-                print(f"Looking for Start button at: {START_PATH}")
-                print(f"File exists: {os.path.exists(START_PATH)}")
-                sys.stdout.flush()
-                
                 try:
-                    print("Attempting to locate Start button...")
-                    sys.stdout.flush()
                     loc_START = pag.locateOnWindow(
                         START_PATH, app, confidence=0.9, grayscale=True
                     )
-                    print(f"Start location: {loc_START}")
-                    sys.stdout.flush()
                     if loc_START is not None:
-                        print(f"Clicking Start at {loc_START[0] + 50}, {loc_START[1] + 25}")
-                        sys.stdout.flush()
                         pag.moveTo(loc_START[0] + 50, loc_START[1] + 25)
                         pag.click()
-                except pag.ImageNotFoundException as e:
-                    print(f"Start button not found: {e}")
-                    sys.stdout.flush()
+                except pag.ImageNotFoundException:
+                    pass
                 except Exception as e:
-                    print(f"Error locating Start: {type(e).__name__}: {e}")
-                    import traceback
-                    traceback.print_exc()
+                    print(f"Error locating Start: {e}")
                     sys.stdout.flush()
                 
-                print("Sleeping 1 second before wave_looping...")
-                sys.stdout.flush()
                 time.sleep(1.00)
-                
-                print("Calling wave_looping()...")
-                sys.stdout.flush()
                 wave_looping()
-                print("wave_looping() completed.")
-                sys.stdout.flush()
                 
                 # Small delay between iterations to prevent CPU spinning
                 time.sleep(0.5)
@@ -212,94 +163,32 @@ def start_bot():
                 print("Bot is already running!")
                 return False
             else:
-                print(f"Previous thread exists but is not alive. Thread state: {_worker_thread.is_alive()}")
                 # Clean up the dead thread
                 _worker_thread = None
         
         print("Creating new bot thread...")
-        sys.stdout.flush()
-        
         _stop_event.clear()
-        print(f"Stop event cleared. Status: {_stop_event.is_set()}")
-        sys.stdout.flush()
-        
-        # Test basic threading first
-        def test_thread():
-            print("TEST: Thread function executed!")
-            sys.stdout.flush()
-            time.sleep(2)
-        
-        test_t = threading.Thread(target=test_thread, daemon=True)
-        test_t.start()
-        time.sleep(0.1)
-        print(f"Test thread alive: {test_t.is_alive()}")
-        sys.stdout.flush()
-        
-        # Test if run_app works when called directly (not in thread)
-        print("\nTESTING: Calling run_app directly (not in thread)...")
-        print("This will block for 2 seconds, then we'll test threading.")
-        sys.stdout.flush()
-        
-        # Don't actually call it - just verify it's callable
-        print(f"run_app is callable: {callable(run_app)}")
-        print(f"run_app function: {run_app}")
-        sys.stdout.flush()
         
         # Wrap run_app to catch any startup errors
         def safe_run_app(stop_event):
-            print("\n" + "!" * 50)
-            print("WRAPPER FUNCTION CALLED!")
-            print("!" * 50)
-            sys.stdout.flush()
             try:
-                print("WRAPPER: About to call run_app...")
-                sys.stdout.flush()
                 run_app(stop_event)
             except Exception as e:
-                print(f"WRAPPER: Exception caught in thread wrapper: {e}")
+                print(f"ERROR: Exception in bot thread: {e}")
                 import traceback
                 traceback.print_exc()
                 sys.stdout.flush()
-            finally:
-                print("WRAPPER: Function finished")
-                sys.stdout.flush()
-        
-        print(f"Creating thread with target: {safe_run_app}")
-        print(f"Target function type: {type(safe_run_app)}")
-        sys.stdout.flush()
         
         _worker_thread = threading.Thread(target=safe_run_app, args=(_stop_event,), daemon=True, name="BotThread")
-        print(f"Thread object created (with wrapper): {_worker_thread}")
-        print(f"Thread daemon: {_worker_thread.daemon}")
-        sys.stdout.flush()
-        
-        print("Calling thread.start()...")
-        sys.stdout.flush()
         _worker_thread.start()
         
-        print(f"Thread.start() called. Thread alive: {_worker_thread.is_alive()}")
-        print(f"Thread ident: {_worker_thread.ident}")
-        sys.stdout.flush()
-        
-        # Check multiple times to see if thread starts executing
-        for i in range(10):
-            time.sleep(0.2)
-            alive = _worker_thread.is_alive()
-            print(f"After {i*0.2:.1f}s - Thread alive: {alive}")
-            sys.stdout.flush()
-            if not alive:
-                break
+        # Give thread a moment to start
+        time.sleep(0.2)
         
         if _worker_thread.is_alive():
-            print("Bot thread created and started successfully")
-            print(f"Thread name: {_worker_thread.name}, ID: {_worker_thread.ident}")
-            sys.stdout.flush()
             return True
         else:
             print("ERROR: Bot thread started but immediately died!")
-            print("This usually means an exception occurred in run_app()")
-            print(f"Thread was alive: {_worker_thread.is_alive()}")
-            sys.stdout.flush()
             _worker_thread = None
             return False
 
@@ -322,9 +211,7 @@ def notify(message, title="Application Notification"):
 def on_press(key):
     """Toggle bot on F4 press."""
     try:
-        print(f"Key pressed: {key}")  # Debug: print all key presses
         if key == Key.f4:
-            print("F4 detected!")  # Debug: confirm F4 was detected
             # Toggle start/stop
             started = start_bot()
             if started:
