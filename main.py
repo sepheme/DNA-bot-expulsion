@@ -57,51 +57,59 @@ def find_game_window():
 
 def run_app(stop_event):
     """Main bot loop running in a background thread. Exits when stop_event is set."""
-    print("Bot thread started.")
-    print(f"Stop event status: {stop_event.is_set()}")  # Debug
-    
-    while not stop_event.is_set():
-        try:
-            # Find and activate game window
-            game_window = find_game_window()
-            
-            if not game_window:
-                print(f"Game window '{app}' not found. Waiting...")
+    try:
+        print("Bot thread started.")
+        print(f"Stop event status: {stop_event.is_set()}")  # Debug
+        
+        while not stop_event.is_set():
+            try:
+                # Find and activate game window
+                game_window = find_game_window()
+                
+                if not game_window:
+                    print(f"Game window '{app}' not found. Waiting...")
+                    time.sleep(1.0)
+                    continue
+                
+                os.system("cls" if os.name == 'nt' else "clear")
+                print("App is running.")
+                try:
+                    loc_CA = pag.locateOnWindow(
+                        CHALLENGE_PATH, app, confidence=0.9, grayscale=True
+                    )
+                    if loc_CA is not None:
+                        pag.moveTo(loc_CA[0] + 50, loc_CA[1] + 25)
+                        pag.click()
+                except pag.ImageNotFoundException:
+                    pass
+                time.sleep(1.00)
+                try:
+                    loc_START = pag.locateOnWindow(
+                        START_PATH, app, confidence=0.9, grayscale=True
+                    )
+                    if loc_START is not None:
+                        pag.moveTo(loc_START[0] + 50, loc_START[1] + 25)
+                        pag.click()
+                except pag.ImageNotFoundException:
+                    pass
+                time.sleep(1.00)
+                wave_looping()
+                
+                # Small delay between iterations to prevent CPU spinning
+                time.sleep(0.5)
+                
+            except Exception as e:
+                print(f"Error in bot loop: {e}")
+                import traceback
+                traceback.print_exc()
                 time.sleep(1.0)
-                continue
-            
-            os.system("cls" if os.name == 'nt' else "clear")
-            print("App is running.")
-            try:
-                loc_CA = pag.locateOnWindow(
-                    CHALLENGE_PATH, app, confidence=0.9, grayscale=True
-                )
-                if loc_CA is not None:
-                    pag.moveTo(loc_CA[0] + 50, loc_CA[1] + 25)
-                    pag.click()
-            except pag.ImageNotFoundException:
-                pass
-            time.sleep(1.00)
-            try:
-                loc_START = pag.locateOnWindow(
-                    START_PATH, app, confidence=0.9, grayscale=True
-                )
-                if loc_START is not None:
-                    pag.moveTo(loc_START[0] + 50, loc_START[1] + 25)
-                    pag.click()
-            except pag.ImageNotFoundException:
-                pass
-            time.sleep(1.00)
-            wave_looping()
-            
-            # Small delay between iterations to prevent CPU spinning
-            time.sleep(0.5)
-            
-        except Exception as e:
-            print(f"Error in bot loop: {e}")
-            time.sleep(1.0)
-    
-    print("Bot thread stopping.")
+        
+        print("Bot thread stopping.")
+    except Exception as e:
+        print(f"FATAL ERROR in run_app thread: {e}")
+        import traceback
+        traceback.print_exc()
+        raise  # Re-raise so we can see what went wrong
 
 
 def wave_looping():
@@ -137,15 +145,31 @@ def start_bot():
     global _worker_thread, _stop_event
     print("Attempting to start bot...")
     with _worker_lock:
-        if _worker_thread is not None and _worker_thread.is_alive():
-            print("Bot is already running!")
-            return False
+        if _worker_thread is not None:
+            if _worker_thread.is_alive():
+                print("Bot is already running!")
+                return False
+            else:
+                print(f"Previous thread exists but is not alive. Thread state: {_worker_thread.is_alive()}")
+                # Clean up the dead thread
+                _worker_thread = None
+        
         print("Creating new bot thread...")
         _stop_event.clear()
         _worker_thread = threading.Thread(target=run_app, args=(_stop_event,), daemon=True)
         _worker_thread.start()
-        print("Bot thread created and started")
-        return True
+        
+        # Give thread a moment to start
+        time.sleep(0.1)
+        
+        if _worker_thread.is_alive():
+            print("Bot thread created and started successfully")
+            return True
+        else:
+            print("ERROR: Bot thread started but immediately died!")
+            print("This usually means an exception occurred in run_app()")
+            _worker_thread = None
+            return False
 
 def stop_bot():
     global _worker_thread, _stop_event
