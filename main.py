@@ -98,9 +98,15 @@ def run_app(stop_event):
             screenshot = ImageGrab.grab(bbox=region)
             if text_to_find.lower() == "start":
                 screenshot = screenshot.convert('L')
-                crop_box = (600, 400, 1096, 559)
+                screenshot = screenshot.point(lambda p: 0 if p < 128 else 255)
+                width, height = screenshot.size
+                left_x = width // 2
+                top_y = height // 2
+                right_x = width
+                bottom_y = height
+                crop_box = (left_x, top_y, right_x, bottom_y)
                 screenshot = screenshot.crop(crop_box)
-            screenshot = screenshot.filter(ImageFilter.MedianFilter(size=3))
+            # screenshot = screenshot.filter(ImageFilter.MedianFilter(size=3))
             screenshot.save(f"assets\img\{text_to_find}.png")
             text = pytesseract.image_to_string(screenshot)
             
@@ -160,11 +166,10 @@ def run_app(stop_event):
                 print("Challenge Again text clicked, waiting before checking Start...")
                 time.sleep(1.75)
                 
-                # Only check for Start text if Challenge Again was clicked
-                start_clicked = check_and_click_text("Start")
-                if start_clicked:
-                    print("Start text clicked, waiting for next cycle...")
-                    time.sleep(1.75)
+            start_clicked = check_and_click_text("Start")
+            if start_clicked:
+                print("Start text clicked, waiting for next cycle...")
+                time.sleep(1.75)
                 
         except Exception as e:
             print(f"Error in bot loop: {e}")
@@ -203,28 +208,28 @@ def notify(message, title="Application Notification"):
         print(message)
 
 def on_press(key):
-    """Toggle bot on F1 press."""
+    """Toggle bot on F4 press."""
     try:
-        if key == Key.f1:
+        if key == Key.f4:
             # Toggle start/stop
             started = start_bot()
             if started:
-                print(">>> F1 pressed — bot started.")
-                notify("Bot started. Press F1 again to stop.")
+                print(">>> F4 pressed — bot started.")
+                notify("Bot started. Press F4 again to stop.")
             else:
                 stopped = stop_bot()
                 if stopped:
-                    print(">>> F1 pressed — bot stopped.")
+                    print(">>> F4 pressed — bot stopped.")
                     notify("Bot stopped.")
                 else:
                     # If start failed because already running, attempt to stop
-                    notify("Bot is already running or stopping. Press F1 again to toggle.")
+                    notify("Bot is already running or stopping. Press F4 again to toggle.")
     except Exception as e:
         print(f"Keyboard handler error: {e}")
 
 if __name__ == "__main__":
     print("-" * 50)
-    print("F1 toggles the bot on/off.")
+    print("F4 toggles the bot on/off.")
     print("Press Ctrl+C to exit")
     print("-" * 50)
 

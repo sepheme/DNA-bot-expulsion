@@ -65,14 +65,17 @@ def check_for_text(stop_event):
         
         screenshot = ImageGrab.grab(bbox=region)
         screenshot = screenshot.convert('L')
-        #screenshot = screenshot.point(lambda p: 0 if p < 128 else 255)
-
-
-        crop_box = (600, 400, 1096, 559)
+        screenshot = screenshot.point(lambda p: 0 if p < 128 else 255)
+        width, height = screenshot.size
+        left_x = width // 2
+        top_y = height // 2
+        right_x = width
+        bottom_y = height
+        crop_box = (left_x, top_y, right_x, bottom_y)
         screenshot = screenshot.crop(crop_box)
 
-        screenshot = screenshot.filter(ImageFilter.MedianFilter(size=3))
-        screenshot.save("cropped_text_area.png")
+        # screenshot = screenshot.filter(ImageFilter.MedianFilter(size=3))
+        screenshot.save("assets\img\cropped_text_area.png")
 
         # img_np = np.array(screenshot)
         # thresh_img_np = cv2.adaptiveThreshold(
