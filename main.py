@@ -17,11 +17,43 @@ _keyboard_controller = Controller()
 try:
     import win32api
     import win32con
+    import ctypes
+    from ctypes import wintypes
     HAS_WIN32API = True
+    
+    # Define SendInput function for better mouse control
+    user32 = ctypes.windll.user32
+    INPUT_MOUSE = 0
+    MOUSEEVENTF_LEFTDOWN = 0x0002
+    MOUSEEVENTF_LEFTUP = 0x0004
+    MOUSEEVENTF_ABSOLUTE = 0x8000
+    
+    # Define ULONG_PTR based on system architecture
+    ULONG_PTR = ctypes.c_ulong if ctypes.sizeof(ctypes.c_void_p) == 4 else ctypes.c_ulonglong
+    
+    class MOUSEINPUT(ctypes.Structure):
+        _fields_ = [
+            ("dx", wintypes.LONG),
+            ("dy", wintypes.LONG),
+            ("mouseData", wintypes.DWORD),
+            ("dwFlags", wintypes.DWORD),
+            ("time", wintypes.DWORD),
+            ("dwExtraInfo", ULONG_PTR)
+        ]
+    
+    class INPUT(ctypes.Structure):
+        _fields_ = [
+            ("type", wintypes.DWORD),
+            ("mi", MOUSEINPUT)
+        ]
+    
 except ImportError:
     HAS_WIN32API = False
     win32api = None
     win32con = None
+    ctypes = None
+    user32 = None
+    ULONG_PTR = None
 
 # Windows notification support
 _toaster = None
@@ -137,26 +169,83 @@ def move_and_click(x, y):
     Returns:
         bool: True if successful, False otherwise
     """
+    if not HAS_WIN32API:
+        print("win32api not available. Please install pywin32.")
+        sys.stdout.flush()
+        return False
+    
     try:
-        if not HAS_WIN32API:
-            print("win32api not available. Please install pywin32.")
+        x_int = int(x)
+        y_int = int(y)
+        
+        print(f"Attempting to move mouse to ({x_int}, {y_int})")
+        sys.stdout.flush()
+        
+        # Method 1: Try SetCursorPos + SendInput (most reliable)
+        try:
+            # Move mouse to position using Windows API
+            result = win32api.SetCursorPos((x_int, y_int))
+            if result == 0:
+                error_code = ctypes.windll.kernel32.GetLastError()
+                print(f"SetCursorPos failed with error code: {error_code}")
+                sys.stdout.flush()
+            
+            time.sleep(0.05)  # Small delay for movement to complete
+            
+            # Use SendInput for clicking (more reliable than mouse_event)
+            extra = ULONG_PTR(0)
+            ii_ = INPUT(type=INPUT_MOUSE, mi=MOUSEINPUT(0, 0, 0, MOUSEEVENTF_LEFTDOWN, 0, extra))
+            result1 = user32.SendInput(1, ctypes.pointer(ii_), ctypes.sizeof(ii_))
+            
+            time.sleep(0.01)  # Small delay between down and up
+            
+            ii_ = INPUT(type=INPUT_MOUSE, mi=MOUSEINPUT(0, 0, 0, MOUSEEVENTF_LEFTUP, 0, extra))
+            result2 = user32.SendInput(1, ctypes.pointer(ii_), ctypes.sizeof(ii_))
+            
+            if result1 == 0 or result2 == 0:
+                error_code = ctypes.windll.kernel32.GetLastError()
+                print(f"SendInput failed with error code: {error_code}")
+                sys.stdout.flush()
+                raise Exception(f"SendInput returned 0, error code: {error_code}")
+            
+            print(f"Mouse click successful (SendInput: {result1}, {result2})")
             sys.stdout.flush()
-            return False
+            return True
+            
+        except Exception as send_input_error:
+            print(f"SendInput method failed: {send_input_error}")
+            sys.stdout.flush()
+            traceback.print_exc()
+            sys.stdout.flush()
+            
+            # Fallback: Try mouse_event
+            try:
+                print("Trying fallback method: mouse_event")
+                sys.stdout.flush()
+                win32api.SetCursorPos((x_int, y_int))
+                time.sleep(0.05)
+                
+                # Click left button down
+                win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, x_int, y_int, 0, 0)
+                time.sleep(0.01)
+                
+                # Click left button up
+                win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, x_int, y_int, 0, 0)
+                
+                print("Mouse click successful (mouse_event fallback)")
+                sys.stdout.flush()
+                return True
+                
+            except Exception as mouse_event_error:
+                print(f"mouse_event fallback also failed: {mouse_event_error}")
+                sys.stdout.flush()
+                traceback.print_exc()
+                sys.stdout.flush()
+                return False
         
-        # Move mouse to position using Windows API
-        win32api.SetCursorPos((int(x), int(y)))
-        time.sleep(0.05)  # Small delay for movement to complete
-        
-        # Click left button down
-        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, int(x), int(y), 0, 0)
-        time.sleep(0.01)  # Small delay between down and up
-        
-        # Click left button up
-        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, int(x), int(y), 0, 0)
-        
-        return True
     except Exception as e:
         print(f"Error with win32api mouse click: {e}")
+        print(f"Error type: {type(e).__name__}")
         sys.stdout.flush()
         traceback.print_exc()
         sys.stdout.flush()
