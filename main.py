@@ -2,6 +2,7 @@ import pyautogui as pag
 import pygetwindow as pgw
 import time
 import os
+import sys
 import threading
 import tkinter as tk
 from tkinter import messagebox
@@ -58,10 +59,17 @@ def find_game_window():
 def run_app(stop_event):
     """Main bot loop running in a background thread. Exits when stop_event is set."""
     try:
+        print("=" * 50)
         print("Bot thread started.")
         print(f"Stop event status: {stop_event.is_set()}")  # Debug
+        print(f"Thread ID: {threading.current_thread().ident}")
+        sys.stdout.flush()
         
+        iteration = 0
         while not stop_event.is_set():
+            iteration += 1
+            print(f"[Iteration {iteration}] Starting loop...")
+            sys.stdout.flush()
             try:
                 # Find and activate game window
                 game_window = find_game_window()
@@ -102,13 +110,16 @@ def run_app(stop_event):
                 print(f"Error in bot loop: {e}")
                 import traceback
                 traceback.print_exc()
+                sys.stdout.flush()
                 time.sleep(1.0)
         
         print("Bot thread stopping.")
+        sys.stdout.flush()
     except Exception as e:
         print(f"FATAL ERROR in run_app thread: {e}")
         import traceback
         traceback.print_exc()
+        sys.stdout.flush()
         raise  # Re-raise so we can see what went wrong
 
 
@@ -155,19 +166,33 @@ def start_bot():
                 _worker_thread = None
         
         print("Creating new bot thread...")
-        _stop_event.clear()
-        _worker_thread = threading.Thread(target=run_app, args=(_stop_event,), daemon=True)
-        _worker_thread.start()
+        sys.stdout.flush()
         
-        # Give thread a moment to start
-        time.sleep(0.1)
+        _stop_event.clear()
+        print(f"Stop event cleared. Status: {_stop_event.is_set()}")
+        sys.stdout.flush()
+        
+        _worker_thread = threading.Thread(target=run_app, args=(_stop_event,), daemon=True, name="BotThread")
+        print(f"Thread object created: {_worker_thread}")
+        sys.stdout.flush()
+        
+        _worker_thread.start()
+        print(f"Thread.start() called. Thread alive: {_worker_thread.is_alive()}")
+        sys.stdout.flush()
+        
+        # Give thread more time to start and execute first print
+        time.sleep(0.5)
         
         if _worker_thread.is_alive():
             print("Bot thread created and started successfully")
+            print(f"Thread name: {_worker_thread.name}, ID: {_worker_thread.ident}")
+            sys.stdout.flush()
             return True
         else:
             print("ERROR: Bot thread started but immediately died!")
             print("This usually means an exception occurred in run_app()")
+            print(f"Thread was alive: {_worker_thread.is_alive()}")
+            sys.stdout.flush()
             _worker_thread = None
             return False
 
