@@ -13,16 +13,24 @@ from pynput.keyboard import Key, Listener, Controller
 _keyboard_controller = Controller()
 
 # Windows notification support
+_toaster = None
 try:
     from win10toast import ToastNotifier
-    HAS_WIN10TOAST = True
+    try:
+        _toaster = ToastNotifier()
+        HAS_WIN10TOAST = True
+    except Exception:
+        HAS_WIN10TOAST = False
+        _toaster = None
 except ImportError:
     HAS_WIN10TOAST = False
-    try:
-        from plyer import notification
-        HAS_PLYER = True
-    except ImportError:
-        HAS_PLYER = False
+    _toaster = None
+
+try:
+    from plyer import notification
+    HAS_PLYER = True
+except ImportError:
+    HAS_PLYER = False
 
 app = "Duet Night Abyss  "
 
@@ -329,18 +337,33 @@ def stop_bot():
 def notify(message, title="Application Notification"):
     """Show Windows notification if available, otherwise fallback to tkinter messagebox."""
     try:
-        # Try Windows 10 toast notification first
-        if HAS_WIN10TOAST:
-            toaster = ToastNotifier()
-            toaster.show_toast(title, message, duration=3, threaded=True)
-            return
-        elif HAS_PLYER:
-            notification.notify(
-                title=title,
-                message=message,
-                timeout=3
-            )
-            return
+        # Try Windows 10 toast notification first (use singleton instance)
+        if HAS_WIN10TOAST and _toaster is not None:
+            try:
+                _toaster.show_toast(title, message, duration=3, threaded=True)
+                return
+            except Exception as e:
+                print(f"win10toast error: {e}, falling back to plyer")
+                # Try to recreate toaster once
+                try:
+                    global _toaster
+                    _toaster = ToastNotifier()
+                    _toaster.show_toast(title, message, duration=3, threaded=True)
+                    return
+                except Exception:
+                    pass
+        
+        # Try plyer notification
+        if HAS_PLYER:
+            try:
+                notification.notify(
+                    title=title,
+                    message=message,
+                    timeout=3
+                )
+                return
+            except Exception:
+                pass
     except Exception:
         pass
     
