@@ -336,6 +336,7 @@ def stop_bot():
 
 def notify(message, title="Application Notification"):
     """Show Windows notification if available, otherwise fallback to tkinter messagebox."""
+    global _toaster
     try:
         # Try Windows 10 toast notification first (use singleton instance)
         if HAS_WIN10TOAST and _toaster is not None:
@@ -346,7 +347,6 @@ def notify(message, title="Application Notification"):
                 print(f"win10toast error: {e}, falling back to plyer")
                 # Try to recreate toaster once
                 try:
-                    global _toaster
                     _toaster = ToastNotifier()
                     _toaster.show_toast(title, message, duration=3, threaded=True)
                     return
