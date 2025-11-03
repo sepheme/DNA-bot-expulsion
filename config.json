@@ -6,7 +6,8 @@
     "min_key_delay": 0.1,
     "max_key_delay": 0.3,
     "min_key_hold_time": 0.05,
-    "max_key_hold_time": 0.15
+    "max_key_hold_time": 0.15,
+    "movement_array": ["w", "a", "s", "d"]
   },
   "features": {
     "enable_random_key_presses": true,

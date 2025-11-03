@@ -36,11 +36,12 @@ Automated bot for Duet Night Abyss game that handles challenge loops, wave manag
 - **Window Management**: Automatically resizes and repositions game window to 1920x1080 at (0,0) (optional, configurable)
 - **Challenge Loop Automation**: Automatically clicks "Challenge Again" and "Start" buttons
 - **Wave Management**: Intelligently handles Continue/Retreat based on wave detection (Wave 8)
-- **Random Key Presses**: Optional feature to press W and S keys randomly when buttons are not found
+- **Random Key Presses**: Optional feature to press configurable movement keys (default: W, A, S, D) randomly when buttons are not found
 - **Windows Notifications**: Optional Windows toast notifications for bot status
-- **Keyboard Controls**: Press F4 to start/stop the bot, Ctrl+C to exit
+- **Keyboard Controls**: Press F4 to start/stop the bot instantly (can interrupt key pressing), Ctrl+C to exit
 - **Robust Mouse Control**: Uses fallback chain (pyautogui → pynput → pydirectinput) for reliable clicking
 - **Thread-safe**: Runs in background thread, can be started/stopped at any time
+- **Window Locking**: Locks onto the game window at startup for consistent operation
 
 ## Requirements
 
@@ -92,20 +93,21 @@ pip install -r requirements.txt
 
 4. **Once in the commission, control the bot**:
    - Press **F4** to start the bot
-   - Press **F4** again to stop the bot
+   - Press **F4** again to stop the bot instantly (can interrupt key pressing)
    - Press **Ctrl+C** to exit the program
 
 ## Configuration
 
-All configuration variables are located in `config.json` for easy modification. The configuration file includes:
+All configuration variables are located in `config.json` for easy modification. **Make sure `config.json` is in the same directory as the executable or script.** The configuration file includes:
 
 ### Key Press Configuration
 - `key_press.min_key_presses` / `key_press.max_key_presses`: Range for random key presses (default: 15-25)
 - `key_press.min_key_delay` / `key_press.max_key_delay`: Delay between key presses in seconds (default: 0.1-0.3)
 - `key_press.min_key_hold_time` / `key_press.max_key_hold_time`: Time to hold each key down in seconds (default: 0.05-0.15)
+- `key_press.movement_array`: Array of keys to press randomly (default: `["w", "a", "s", "d"]`)
 
 ### Feature Flags
-- `features.enable_random_key_presses`: Enable random W/S key presses when buttons not found (default: `true`)
+- `features.enable_random_key_presses`: Enable random key presses from movement_array when buttons not found (default: `true`)
 - `features.enable_notifications`: Enable Windows notifications (default: `true`)
 - `features.enable_window_detection`: Enable automatic window detection, activation, and resizing (default: `true`)
 
@@ -131,19 +133,21 @@ The bot requires image assets in the `assets/img/` directory:
 ## How It Works
 
 1. **Admin Check**: On Windows, checks if running as administrator (exits if not)
-2. **Window Detection**: The bot searches for the game window titled "Duet Night Abyss"
-3. **Window Management** (if enabled): Resizes window to 1920x1080 and moves to (0,0)
+2. **Window Locking**: On startup, searches for and locks onto the game window titled "Duet Night Abyss"
+3. **Window Management** (if enabled): Resizes window to configured size and moves to configured position
 4. **Auto-switch**: If the game window is not active, it performs Alt+Tab to switch to it (if enabled)
-5. **Image Recognition**: Uses PyAutoGUI to locate buttons on screen by matching images
+5. **Image Recognition**: Uses PyAutoGUI with OpenCV to locate buttons on screen by matching images
 6. **Mouse Clicking**: Uses fallback chain:
    - First tries `pyautogui`
    - Falls back to `pynput.mouse` if pyautogui fails
    - Falls back to `pydirectinput` if pynput fails
-7. **Random Key Presses** (if enabled): When buttons are not found, presses W and S keys randomly
+7. **Random Key Presses** (if enabled): When buttons are not found, presses keys from `movement_array` randomly (default: W, A, S, D)
 8. **Wave Logic**: 
-   - If Wave 8 is detected → clicks Retreat
-   - If Wave 8 is not detected → clicks Continue
+   - Only checks for waves when both Continue and Retreat buttons are visible
+   - If Wave 6 or Wave 8 is detected → clicks Retreat
+   - If no wave is detected → clicks Continue
 9. **Loop**: Continuously checks for buttons and clicks them when found
+10. **Instant Stop**: F4 can interrupt the bot immediately, even during key pressing
 
 ## Building Executable
 
@@ -199,10 +203,12 @@ The executable will be created in the `dist/` directory.
 ## Notes
 
 - The bot runs in a background thread, so it won't block your terminal
+- **Configuration**: The bot requires `config.json` in the same directory as the executable/script
 - Make sure the game window is visible and the images match your screen resolution
 - The bot uses image matching, so ensure your game UI matches the reference images
 - On Windows, administrator privileges are required for mouse/keyboard simulation
 - Mouse clicking uses a fallback chain to ensure reliability across different systems
+- The bot locks onto the game window at startup - make sure the game is running before starting the bot
 
 ## Known Issues
 
@@ -215,17 +221,20 @@ If you're interested in collaborating and improving this project, feel free to m
 ## Troubleshooting
 
 - **"Administrator privileges are required" error**: Run the script/executable as Administrator on Windows
-- **Bot not finding game window**: Make sure the game is running and the window title matches "Duet Night Abyss  "
+- **"config.json not found" error**: Ensure `config.json` is in the same directory as the executable or script
+- **Bot not finding game window**: Make sure the game is running before starting the bot. The bot locks onto the window at startup.
 - **Buttons not being clicked**: 
   - Check that the image files in `assets/img/` match your game's UI
-  - Try adjusting confidence levels in configuration
+  - Try adjusting confidence levels in `config.json`
   - Check console logs to see which mouse click method is being used
-- **Window switching issues**: Ensure you have proper permissions and `ENABLE_WINDOW_DETECTION` is set to `True`
+- **Window switching issues**: Ensure you have proper permissions and `enable_window_detection` is set to `true` in `config.json`
 - **Mouse clicks not working**: The bot uses a fallback chain - check console logs to see which method succeeded/failed
+- **Bot not stopping immediately**: Press F4 again - it should interrupt within a fraction of a second
 
 ## Dependencies
 
 - `pyautogui` - GUI automation and image recognition
+- `opencv-python` - Required for PyAutoGUI's confidence parameter
 - `pygetwindow` - Window management
 - `pynput` - Keyboard and mouse control (fallback)
 - `pydirectinput-rgx` - DirectInput for game compatibility (fallback)

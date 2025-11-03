@@ -57,6 +57,7 @@ MIN_KEY_DELAY = config.get("key_press", {}).get("min_key_delay", 0.1)
 MAX_KEY_DELAY = config.get("key_press", {}).get("max_key_delay", 0.3)
 MIN_KEY_HOLD_TIME = config.get("key_press", {}).get("min_key_hold_time", 0.05)
 MAX_KEY_HOLD_TIME = config.get("key_press", {}).get("max_key_hold_time", 0.15)
+MOVEMENT_ARRAY = config.get("key_press", {}).get("movement_array", ["w", "a", "s", "d"])
 
 # Feature flags
 ENABLE_RANDOM_KEY_PRESSES = config.get("features", {}).get("enable_random_key_presses", True)
@@ -129,46 +130,57 @@ _worker_thread = None
 _worker_lock = threading.Lock()
 _locked_game_window = None  # Store the locked game window
 
-def press_keys_randomly():
-    """Press W key randomly between MIN_KEY_PRESSES and MAX_KEY_PRESSES times, then D key the same.
-    Each key is held down for a random duration between MIN_KEY_HOLD_TIME and MAX_KEY_HOLD_TIME."""
-    w_presses = random.randint(MIN_KEY_PRESSES, MAX_KEY_PRESSES)
-    d_presses = random.randint(MIN_KEY_PRESSES, MAX_KEY_PRESSES)
+def press_keys_randomly(stop_event=None):
+    """Press keys from movement_array randomly between MIN_KEY_PRESSES and MAX_KEY_PRESSES times.
+    Each key is held down for a random duration between MIN_KEY_HOLD_TIME and MAX_KEY_HOLD_TIME.
+    Can be interrupted immediately if stop_event is set."""
+    # Get random number of presses for each key in movement array
+    key_press_counts = {}
+    for key in MOVEMENT_ARRAY:
+        key_press_counts[key] = random.randint(MIN_KEY_PRESSES, MAX_KEY_PRESSES)
     
-    # Send Windows notification
-    notify("Pressing keys randomly", f"W key: {w_presses} times, D key: {d_presses} times")
+    # Create notification message
+    key_list = ", ".join([f"{k.upper()}: {key_press_counts[k]}" for k in MOVEMENT_ARRAY])
+    notify("Pressing keys randomly", f"Keys: {key_list}")
     
-    print(f"Pressing W key {w_presses} times...")
-    sys.stdout.flush()
-    for _ in range(w_presses):
-        try:
-            pag.keyDown('w')
-            time.sleep(random.uniform(MIN_KEY_HOLD_TIME, MAX_KEY_HOLD_TIME))
-            pag.keyUp('w')
-        except Exception as e:
-            print(f"Error with PyAutoGUI key press, using pynput fallback: {e}")
+    # Press each key in the movement array
+    for key in MOVEMENT_ARRAY:
+        # Check if we should stop before processing each key
+        if stop_event and stop_event.is_set():
+            print("Key pressing interrupted by stop signal.")
             sys.stdout.flush()
-            # Fallback to pynput
-            _keyboard_controller.press('w')
-            time.sleep(random.uniform(MIN_KEY_HOLD_TIME, MAX_KEY_HOLD_TIME))
-            _keyboard_controller.release('w')
-        time.sleep(random.uniform(MIN_KEY_DELAY, MAX_KEY_DELAY))
-    
-    print(f"Pressing D key {d_presses} times...")
-    sys.stdout.flush()
-    for _ in range(d_presses):
-        try:
-            pag.keyDown('d')
-            time.sleep(random.uniform(MIN_KEY_HOLD_TIME, MAX_KEY_HOLD_TIME))
-            pag.keyUp('d')
-        except Exception as e:
-            print(f"Error with PyAutoGUI key press, using pynput fallback: {e}")
-            sys.stdout.flush()
-            # Fallback to pynput
-            _keyboard_controller.press('d')
-            time.sleep(random.uniform(MIN_KEY_HOLD_TIME, MAX_KEY_HOLD_TIME))
-            _keyboard_controller.release('d')
-        time.sleep(random.uniform(MIN_KEY_DELAY, MAX_KEY_DELAY))
+            return
+        
+        presses = key_press_counts[key]
+        print(f"Pressing {key.upper()} key {presses} times...")
+        sys.stdout.flush()
+        
+        for _ in range(presses):
+            # Check if we should stop before each key press
+            if stop_event and stop_event.is_set():
+                print("Key pressing interrupted by stop signal.")
+                sys.stdout.flush()
+                return
+            
+            try:
+                pag.keyDown(key)
+                time.sleep(random.uniform(MIN_KEY_HOLD_TIME, MAX_KEY_HOLD_TIME))
+                pag.keyUp(key)
+            except Exception as e:
+                print(f"Error with PyAutoGUI key press, using pynput fallback: {e}")
+                sys.stdout.flush()
+                # Fallback to pynput
+                _keyboard_controller.press(key)
+                time.sleep(random.uniform(MIN_KEY_HOLD_TIME, MAX_KEY_HOLD_TIME))
+                _keyboard_controller.release(key)
+            
+            # Check stop event before delay to make it more responsive
+            if stop_event and stop_event.is_set():
+                print("Key pressing interrupted by stop signal.")
+                sys.stdout.flush()
+                return
+            
+            time.sleep(random.uniform(MIN_KEY_DELAY, MAX_KEY_DELAY))
     
     print("Key presses completed.")
     sys.stdout.flush()
@@ -392,6 +404,7 @@ def run_app(stop_event):
                 os.system("cls" if os.name == 'nt' else "clear")
                 
                 # Check all buttons: Challenge Again, Start, Continue, Retreat, and Waves (if applicable)
+                # OpenCV Code Below
                 loc_CA = None
                 loc_START = None
                 loc_CONTINUE = None
@@ -604,7 +617,7 @@ def run_app(stop_event):
                     if ENABLE_RANDOM_KEY_PRESSES:
                         print("Challenge Again, Start, and Continue buttons not found. Pressing keys randomly...")
                         sys.stdout.flush()
-                        press_keys_randomly()
+                        press_keys_randomly(stop_event)
                     else:
                         print("Challenge Again, Start, and Continue buttons not found. Random key presses disabled.")
                         sys.stdout.flush()
