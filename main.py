@@ -380,12 +380,12 @@ def notify(message, title="Application Notification"):
         print(f"{title}: {message}")
 
 def show_settings_window():
-    """Show a GUI window to toggle random key presses."""
-    global ENABLE_RANDOM_KEY_PRESSES
+    """Show a GUI window to toggle random key presses and adjust confidence."""
+    global ENABLE_RANDOM_KEY_PRESSES, CONFIDENCE_CHALLENGE_START
     
     settings_window = tk.Toplevel(root)
     settings_window.title("DNA Bot Settings")
-    settings_window.geometry("350x180")
+    settings_window.geometry("350x280")
     settings_window.resizable(False, False)
     settings_window.attributes('-topmost', True)
     
@@ -394,7 +394,14 @@ def show_settings_window():
         settings_window, 
         text="Bot Configuration",
         font=("Arial", 14, "bold")
-    ).pack(pady=15)
+    ).pack(pady=10)
+    
+    # Random Key Presses Section
+    tk.Label(
+        settings_window,
+        text="Random Key Presses:",
+        font=("Arial", 10, "bold")
+    ).pack(pady=(5, 0))
     
     # Checkbox variable
     checkbox_var = tk.BooleanVar(value=ENABLE_RANDOM_KEY_PRESSES)
@@ -406,7 +413,7 @@ def show_settings_window():
         font=("Arial", 9),
         fg="green" if ENABLE_RANDOM_KEY_PRESSES else "red"
     )
-    status_label.pack(pady=5)
+    status_label.pack(pady=2)
     
     # Update global variable when checkbox changes
     def update_flag():
@@ -429,7 +436,57 @@ def show_settings_window():
         command=update_flag,
         justify=tk.LEFT
     )
-    checkbox.pack(pady=10)
+    checkbox.pack(pady=5)
+    
+    # Confidence Section
+    tk.Label(
+        settings_window,
+        text="Button Detection Confidence:",
+        font=("Arial", 10, "bold")
+    ).pack(pady=(10, 5))
+    
+    # Create confidence options from 50% to 90%
+    confidence_options = [f"{i}%" for i in range(50, 91, 5)]  # 50%, 55%, 60%, ..., 90%
+    current_confidence_percent = int(CONFIDENCE_CHALLENGE_START * 100)
+    current_confidence_str = f"{current_confidence_percent}%"
+    
+    # Use the closest available value if current doesn't match exactly
+    if current_confidence_str not in confidence_options:
+        # Find closest value
+        closest = min(confidence_options, key=lambda x: abs(int(x[:-1]) - current_confidence_percent))
+        current_confidence_str = closest
+    
+    # Confidence dropdown variable
+    confidence_var = tk.StringVar(value=current_confidence_str)
+    
+    # Confidence status label
+    confidence_status_label = tk.Label(
+        settings_window,
+        text=f"Current: {current_confidence_str}",
+        font=("Arial", 9),
+        fg="blue"
+    )
+    confidence_status_label.pack(pady=2)
+    
+    # Update confidence function
+    def update_confidence(*args):
+        global CONFIDENCE_CHALLENGE_START
+        selected = confidence_var.get()
+        confidence_value = int(selected.replace('%', '')) / 100.0
+        CONFIDENCE_CHALLENGE_START = confidence_value
+        confidence_status_label.config(text=f"Current: {selected}")
+        print(f"[Settings] Confidence set to: {selected} ({confidence_value})")
+        notify(f"Confidence set to {selected}", "Settings Updated")
+    
+    # Create dropdown menu
+    confidence_dropdown = tk.OptionMenu(
+        settings_window,
+        confidence_var,
+        *confidence_options,
+        command=update_confidence
+    )
+    confidence_dropdown.config(width=15, font=("Arial", 10))
+    confidence_dropdown.pack(pady=5)
     
     # Close button
     tk.Button(
@@ -437,7 +494,7 @@ def show_settings_window():
         text="Close",
         command=settings_window.destroy,
         width=12
-    ).pack(pady=10)
+    ).pack(pady=15)
 
 def on_press(key):
     """Toggle bot on F4 press, open settings on F5."""
