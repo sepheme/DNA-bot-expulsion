@@ -241,13 +241,23 @@ def run_app(stop_event):
                 
                 # Click buttons if found
                 if loc_CA is not None:
-                    pag.moveTo(loc_CA[0] + 50, loc_CA[1] + 25)
+                    # Convert window-relative coordinates to absolute screen coordinates
+                    absolute_x = game_window.left + loc_CA[0] + 50
+                    absolute_y = game_window.top + loc_CA[1] + 25
+                    print(f"Moving to absolute position: ({absolute_x}, {absolute_y})")
+                    sys.stdout.flush()
+                    pag.moveTo(absolute_x, absolute_y)
                     pag.click()
                     print("Challenge Again button clicked")
                     sys.stdout.flush()
                 
                 if loc_START is not None:
-                    pag.moveTo(loc_START[0] + 50, loc_START[1] + 25)
+                    # Convert window-relative coordinates to absolute screen coordinates
+                    absolute_x = game_window.left + loc_START[0] + 50
+                    absolute_y = game_window.top + loc_START[1] + 25
+                    print(f"Moving to absolute position: ({absolute_x}, {absolute_y})")
+                    sys.stdout.flush()
+                    pag.moveTo(absolute_x, absolute_y)
                     pag.click()
                     print("Start button clicked")
                     sys.stdout.flush()
@@ -263,7 +273,7 @@ def run_app(stop_event):
                         sys.stdout.flush()
                 
                 time.sleep(1.00)
-                wave_looping()
+                wave_looping(game_window)
                 
                 # Small delay between iterations to prevent CPU spinning
                 time.sleep(0.5)
@@ -285,7 +295,8 @@ def run_app(stop_event):
         raise  # Re-raise so we can see what went wrong
 
 
-def wave_looping():
+def wave_looping(game_window):
+    """Handle wave looping with Continue/Retreat logic."""
     loc_CONTINUE = None
     loc_RETREAT = None
     loc_WAVE8 = None
@@ -301,16 +312,25 @@ def wave_looping():
         )
         if loc_WAVE8 is None:
             if loc_CONTINUE is not None:
-                pag.moveTo(loc_CONTINUE[0] + 50, loc_CONTINUE[1] + 25)
+                # Convert window-relative coordinates to absolute screen coordinates
+                absolute_x = game_window.left + loc_CONTINUE[0] + 50
+                absolute_y = game_window.top + loc_CONTINUE[1] + 25
+                pag.moveTo(absolute_x, absolute_y)
                 pag.click()
         elif loc_WAVE8 is not None:
             if loc_RETREAT is not None:
-                pag.moveTo(loc_RETREAT[0] + 50, loc_RETREAT[1] + 25)
+                # Convert window-relative coordinates to absolute screen coordinates
+                absolute_x = game_window.left + loc_RETREAT[0] + 50
+                absolute_y = game_window.top + loc_RETREAT[1] + 25
+                pag.moveTo(absolute_x, absolute_y)
                 pag.click()
     except Exception as e:
         if loc_CONTINUE is not None:
-                pag.moveTo(loc_CONTINUE[0] + 50, loc_CONTINUE[1] + 25)
-                pag.click()
+            # Convert window-relative coordinates to absolute screen coordinates
+            absolute_x = game_window.left + loc_CONTINUE[0] + 50
+            absolute_y = game_window.top + loc_CONTINUE[1] + 25
+            pag.moveTo(absolute_x, absolute_y)
+            pag.click()
     time.sleep(1.00)
 
 
