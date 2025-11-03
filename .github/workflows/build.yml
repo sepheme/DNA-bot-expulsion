@@ -1,10 +1,13 @@
-name: Build Windows Executable
+name: Build Windows Executable and Release
 
 on:
   workflow_dispatch:  # Manual trigger only
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags like v1.0.0, v1.2.3, etc.
 
 jobs:
-  build:
+  build-and-release:
     runs-on: windows-latest
     
     steps:
@@ -25,10 +28,48 @@ jobs:
       run: |
         python -m PyInstaller --onefile --console --name "DNA-Bot-Expulsion" --icon=NONE --add-data "assets;assets" --hidden-import=win10toast --hidden-import=pynput.keyboard --hidden-import=pynput.mouse --hidden-import=pyautogui --hidden-import=pygetwindow --hidden-import=tkinter --hidden-import=win10toast.toast --hidden-import=pydirectinput --collect-all=win10toast main.py
     
+    - name: Get version from tag and create timestamp
+      id: get_version
+      shell: pwsh
+      env:
+        REF_TYPE: ${{ github.ref_type }}
+        REF_NAME: ${{ github.ref_name }}
+      run: |
+        $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+        if ($env:REF_TYPE -eq "tag") {
+          $version = $env:REF_NAME
+        } else {
+          $version = "manual-build-$timestamp"
+        }
+        Write-Host "version=$version"
+        Write-Host "timestamp=$timestamp"
+        "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        "timestamp=$timestamp" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+    
+    - name: Rename executable with timestamp
+      shell: pwsh
+      run: |
+        $timestamp = "${{ steps.get_version.outputs.timestamp }}"
+        $newName = "DNA-$timestamp.exe"
+        Move-Item -Path "dist/DNA-Bot-Expulsion.exe" -Destination "dist/$newName" -Force
+        Write-Host "Renamed executable to $newName"
+    
+    - name: Create Release
+      if: github.ref_type == 'tag'
+      uses: softprops/action-gh-release@v1
+      with:
+        files: dist/DNA-${{ steps.get_version.outputs.timestamp }}.exe
+        name: Release ${{ github.ref_name }}
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
     - name: Upload executable artifact
       uses: actions/upload-artifact@v4
       with:
-        name: DNA-Bot-Expulsion-Windows
-        path: dist/DNA-Bot-Expulsion.exe
+        name: DNA-Bot-Expulsion-Windows-${{ steps.get_version.outputs.version }}
+        path: dist/DNA-${{ steps.get_version.outputs.timestamp }}.exe
         retention-days: 30
 
