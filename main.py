@@ -162,6 +162,10 @@ def run_app(stop_event):
                 
                 os.system("cls" if os.name == 'nt' else "clear")
                 
+                # Check both buttons first
+                loc_CA = None
+                loc_START = None
+                
                 print("Checking for Challenge Again button...")
                 sys.stdout.flush()
                 notify("Checking screen", "Looking for Challenge Again button...")
@@ -172,20 +176,12 @@ def run_app(stop_event):
                     if loc_CA is not None:
                         print(f"Challenge Again button found at ({loc_CA[0]}, {loc_CA[1]})")
                         sys.stdout.flush()
-                        pag.moveTo(loc_CA[0] + 50, loc_CA[1] + 25)
-                        pag.click()
-                        print("Challenge Again button clicked")
-                        sys.stdout.flush()
                     else:
                         print("Challenge Again button not found on screen")
                         sys.stdout.flush()
-                        # Button not found, press keys randomly
-                        press_keys_randomly()
                 except pag.ImageNotFoundException:
                     print("Challenge Again button not found (ImageNotFoundException)")
                     sys.stdout.flush()
-                    # Button not found, press keys randomly
-                    press_keys_randomly()
                 except Exception as e:
                     print(f"Error locating Challenge Again: {e}")
                     sys.stdout.flush()
@@ -202,23 +198,34 @@ def run_app(stop_event):
                     if loc_START is not None:
                         print(f"Start button found at ({loc_START[0]}, {loc_START[1]})")
                         sys.stdout.flush()
-                        pag.moveTo(loc_START[0] + 50, loc_START[1] + 25)
-                        pag.click()
-                        print("Start button clicked")
-                        sys.stdout.flush()
                     else:
                         print("Start button not found on screen")
                         sys.stdout.flush()
-                        # Button not found, press keys randomly
-                        press_keys_randomly()
                 except pag.ImageNotFoundException:
                     print("Start button not found (ImageNotFoundException)")
                     sys.stdout.flush()
-                    # Button not found, press keys randomly
-                    press_keys_randomly()
                 except Exception as e:
                     print(f"Error locating Start: {e}")
                     sys.stdout.flush()
+                
+                # Click buttons if found
+                if loc_CA is not None:
+                    pag.moveTo(loc_CA[0] + 50, loc_CA[1] + 25)
+                    pag.click()
+                    print("Challenge Again button clicked")
+                    sys.stdout.flush()
+                
+                if loc_START is not None:
+                    pag.moveTo(loc_START[0] + 50, loc_START[1] + 25)
+                    pag.click()
+                    print("Start button clicked")
+                    sys.stdout.flush()
+                
+                # Only press keys randomly if BOTH buttons are not found
+                if loc_CA is None and loc_START is None:
+                    print("Both Challenge Again and Start buttons not found. Pressing keys randomly...")
+                    sys.stdout.flush()
+                    press_keys_randomly()
                 
                 time.sleep(1.00)
                 wave_looping()
