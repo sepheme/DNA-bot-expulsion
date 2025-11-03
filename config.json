@@ -15,7 +15,8 @@
   "features": {
     "enable_random_key_presses": true,
     "enable_notifications": true,
-    "enable_window_detection": true
+    "enable_window_detection": true,
+    "enable_map_detection": true
   },
   "confidence": {
     "challenge_start": 0.9,

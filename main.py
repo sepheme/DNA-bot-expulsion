@@ -66,6 +66,7 @@ MOVEMENT_ARRAY_ELEVATOR = config.get("key_press", {}).get("movement_array_elevat
 ENABLE_RANDOM_KEY_PRESSES = config.get("features", {}).get("enable_random_key_presses", True)
 ENABLE_NOTIFICATIONS = config.get("features", {}).get("enable_notifications", True)
 ENABLE_WINDOW_DETECTION = config.get("features", {}).get("enable_window_detection", True)
+ENABLE_MAP_DETECTION = config.get("features", {}).get("enable_map_detection", True)
 
 # Image recognition confidence levels
 CONFIDENCE_CHALLENGE_START = config.get("confidence", {}).get("challenge_start", 0.9)
@@ -192,27 +193,34 @@ def press_keys_randomly(stop_event=None):
     """Press keys from movement_array randomly between MIN_KEY_PRESSES and MAX_KEY_PRESSES times.
     Each key is held down for a random duration between MIN_KEY_HOLD_TIME and MAX_KEY_HOLD_TIME.
     Can be interrupted immediately if stop_event is set.
-    Automatically detects current map and uses map-specific movement array if available."""
+    Automatically detects current map and uses map-specific movement array if map detection is enabled."""
     
-    # Detect current map and select appropriate movement array
-    current_map = detect_current_map()
+    # Detect current map and select appropriate movement array (if map detection is enabled)
     movement_array_to_use = MOVEMENT_ARRAY  # Default movement array
     
-    if current_map == 'sewers':
-        movement_array_to_use = MOVEMENT_ARRAY_SEWERS
-        print("Using sewers movement array")
-        sys.stdout.flush()
-    elif current_map == 'stairs':
-        movement_array_to_use = MOVEMENT_ARRAY_STAIRS
-        print("Using stairs movement array")
-        sys.stdout.flush()
-    elif current_map == 'elevator':
-        movement_array_to_use = MOVEMENT_ARRAY_ELEVATOR
-        print("Using elevator movement array")
-        sys.stdout.flush()
+    if ENABLE_MAP_DETECTION:
+        current_map = detect_current_map()
+        
+        if current_map == 'sewers':
+            movement_array_to_use = MOVEMENT_ARRAY_SEWERS
+            print("Using sewers movement array")
+            sys.stdout.flush()
+        elif current_map == 'stairs':
+            movement_array_to_use = MOVEMENT_ARRAY_STAIRS
+            print("Using stairs movement array")
+            sys.stdout.flush()
+        elif current_map == 'elevator':
+            movement_array_to_use = MOVEMENT_ARRAY_ELEVATOR
+            print("Using elevator movement array")
+            sys.stdout.flush()
+        else:
+            print("No map detected, using default movement array")
+            sys.stdout.flush()
+            current_map = None
     else:
-        print("No map detected, using default movement array")
+        print("Map detection disabled, using default movement array")
         sys.stdout.flush()
+        current_map = None
     
     # Get random number of presses for each key in movement array
     key_press_counts = {}
