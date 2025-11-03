@@ -11,6 +11,35 @@ from tkinter import messagebox
 from pynput.keyboard import Key, Listener, Controller
 from pynput.mouse import Button, Controller as MouseController
 
+# ============================================================================
+# CONFIGURATION VARIABLES AND FLAGS
+# ============================================================================
+
+# Application name
+app = "Duet Night Abyss  "
+
+# Key press configuration
+MIN_KEY_PRESSES = 15  # Minimum number of key presses for W and D keys
+MAX_KEY_PRESSES = 25  # Maximum number of key presses for W and D keys
+MIN_KEY_DELAY = 0.1  # Minimum delay between key presses (seconds)
+MAX_KEY_DELAY = 0.3  # Maximum delay between key presses (seconds)
+MIN_KEY_HOLD_TIME = 0.05  # Minimum time to hold each key down (seconds)
+MAX_KEY_HOLD_TIME = 0.15  # Maximum time to hold each key down (seconds)
+
+# Feature flags
+ENABLE_RANDOM_KEY_PRESSES = False  # Enable random key presses when buttons are not found
+ENABLE_NOTIFICATIONS = False  # Enable Windows notifications
+ENABLE_WINDOW_DETECTION = False  # Enable automatic window detection, activation, and resizing
+
+# Image recognition confidence levels
+CONFIDENCE_CHALLENGE_START = 0.9  # Confidence for Challenge Again and Start buttons
+CONFIDENCE_CONTINUE_RETREAT = 0.8  # Confidence for Continue and Retreat buttons
+CONFIDENCE_WAVE8 = 0.99  # Confidence for Wave 8 detection
+
+# ============================================================================
+# INITIALIZATION
+# ============================================================================
+
 # Initialize pynput keyboard controller as fallback
 _keyboard_controller = Controller()
 
@@ -45,8 +74,6 @@ try:
 except ImportError:
     HAS_PLYER = False
 
-app = "Duet Night Abyss  "
-
 # Handle both script and PyInstaller executable paths
 if getattr(sys, 'frozen', False):
     # Running as compiled executable (PyInstaller)
@@ -61,20 +88,6 @@ CONTINUE_PATH = os.path.join(BASE_DIR, "assets", "img", "continue.png")
 RETREAT_PATH = os.path.join(BASE_DIR, "assets", "img", "retreat.png")
 WAVE6_PATH = os.path.join(BASE_DIR, "assets", "img", "wave_06.png")
 WAVE8_PATH = os.path.join(BASE_DIR, "assets", "img", "wave8.png")
-
-# Configuration variables
-MIN_KEY_PRESSES = 15  # Minimum number of key presses for W and D keys
-MAX_KEY_PRESSES = 25  # Maximum number of key presses for W and D keys
-MIN_KEY_DELAY = 0.1  # Minimum delay between key presses (seconds)
-MAX_KEY_DELAY = 0.3  # Maximum delay between key presses (seconds)
-MIN_KEY_HOLD_TIME = 0.05  # Minimum time to hold each key down (seconds)
-MAX_KEY_HOLD_TIME = 0.15  # Maximum time to hold each key down (seconds)
-ENABLE_RANDOM_KEY_PRESSES = False  # Enable random key presses when buttons are not found
-ENABLE_NOTIFICATIONS = False  # Enable Windows notifications
-ENABLE_WINDOW_DETECTION = False  # Enable automatic window detection, activation, and resizing
-CONFIDENCE_CHALLENGE_START = 0.9  # Confidence for Challenge Again and Start buttons
-CONFIDENCE_CONTINUE_RETREAT = 0.8  # Confidence for Continue and Retreat buttons
-CONFIDENCE_WAVE8 = 0.99  # Confidence for Wave 8 detection
 
 # Hidden tkinter root for messageboxes
 root = tk.Tk()
