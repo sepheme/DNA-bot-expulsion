@@ -14,7 +14,7 @@ fi
 
 echo ""
 echo "Creating executable..."
-pyinstaller --onefile --name "DNA-Bot-Expulsion" \
+python3 -m PyInstaller --onefile --name "DNA-Bot-Expulsion" \
     --add-data "assets:assets" \
     --hidden-import=win10toast \
     --hidden-import=pynput.keyboard \

@@ -9,12 +9,12 @@ REM Check if PyInstaller is installed
 python -c "import PyInstaller" 2>nul
 if errorlevel 1 (
     echo Installing PyInstaller...
-    pip install pyinstaller
+    python -m pip install pyinstaller
 )
 
 echo.
 echo Creating executable...
-pyinstaller --onefile --console --name "DNA-Bot-Expulsion" --icon=NONE ^
+python -m PyInstaller --onefile --console --name "DNA-Bot-Expulsion" --icon=NONE ^
     --add-data "assets;assets" ^
     --hidden-import=win10toast ^
     --hidden-import=pynput.keyboard ^
