@@ -4,3 +4,4 @@ pynput>=1.7.6
 win10toast>=0.9
 pyinstaller>=5.0
 pywin32>=300; sys_platform == "win32"
+pydirectinput-rgx>=1.0.0
