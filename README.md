@@ -105,14 +105,17 @@ The bot requires image assets in the `assets/img/` directory:
 
 ### Download Pre-built Executable (Recommended)
 
-The project includes GitHub Actions that automatically build Windows executables:
+The project includes GitHub Actions that can build Windows executables:
 
 1. Go to the **Actions** tab in the GitHub repository
-2. Select the latest workflow run
-3. Scroll down to **Artifacts**
-4. Download `DNA-Bot-Expulsion-Windows` which contains `DNA-Bot-Expulsion.exe`
+2. Select the **Build Windows Executable** workflow
+3. Click **Run workflow** button (on the right side)
+4. Select the branch (usually `main` or `master`)
+5. Click **Run workflow** to start the build
+6. Once the workflow completes, scroll down to **Artifacts**
+7. Download `DNA-Bot-Expulsion-Windows` which contains `DNA-Bot-Expulsion.exe`
 
-The executable is built automatically on every push to `main`/`master` branch and on pull requests.
+The workflow must be manually triggered from the Actions tab.
 
 ### Build Locally
 
