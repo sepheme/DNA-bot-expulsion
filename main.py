@@ -58,9 +58,7 @@ MAX_KEY_DELAY = config.get("key_press", {}).get("max_key_delay", 0.3)
 MIN_KEY_HOLD_TIME = config.get("key_press", {}).get("min_key_hold_time", 0.05)
 MAX_KEY_HOLD_TIME = config.get("key_press", {}).get("max_key_hold_time", 0.15)
 MOVEMENT_ARRAY = config.get("key_press", {}).get("movement_array", ["w", "a", "s", "d"])
-MOVEMENT_ARRAY_SEWERS = config.get("key_press", {}).get("movement_array_sewers", ["w", "s"])
-MOVEMENT_ARRAY_STAIRS = config.get("key_press", {}).get("movement_array_stairs", ["w", "a", "d"])
-MOVEMENT_ARRAY_ELEVATOR = config.get("key_press", {}).get("movement_array_elevator", ["w"])
+MOVEMENT_ARRAY_GLEVUM_PIT_ELEVATOR = config.get("key_press", {}).get("movement_array_glevum_pit_elevator", ["w", "space"])
 
 # Feature flags
 ENABLE_RANDOM_KEY_PRESSES = config.get("features", {}).get("enable_random_key_presses", True)
@@ -126,9 +124,7 @@ WAVE6_PATH = os.path.join(BASE_DIR, "assets", "buttons", "wave_06.png")
 WAVE8_PATH = os.path.join(BASE_DIR, "assets", "buttons", "wave_8.png")
 
 # Map image paths
-SEWERS_PATH = os.path.join(BASE_DIR, "assets", "maps", "sewers.png")
-STAIRS_PATH = os.path.join(BASE_DIR, "assets", "maps", "stairs.png")
-ELEVATOR_PATH = os.path.join(BASE_DIR, "assets", "maps", "elevator.png")
+GLEVUM_PIT_ELEVATOR_PATH = os.path.join(BASE_DIR, "assets", "maps", "glevum_pit_elevator.png")
 
 # Hidden tkinter root for messageboxes
 root = tk.Tk()
@@ -142,44 +138,20 @@ _locked_game_window = None  # Store the locked game window
 
 def detect_current_map():
     """Detect which map is currently visible in the game window.
-    Returns: 'sewers', 'stairs', 'elevator', or None if no match found."""
+    Returns: 'glevum_pit_elevator', or None if no match found."""
     if not _locked_game_window:
         return None
     
     try:
-        # Check for sewers
+        # Check for glevum_pit_elevator
         try:
-            loc_sewers = pag.locateOnWindow(
-                SEWERS_PATH, app, confidence=CONFIDENCE_MAP_DETECTION, grayscale=True
+            loc_glevum_pit_elevator = pag.locateOnWindow(
+                GLEVUM_PIT_ELEVATOR_PATH, app, confidence=CONFIDENCE_MAP_DETECTION, grayscale=True
             )
-            if loc_sewers is not None:
-                print("Sewers map detected")
+            if loc_glevum_pit_elevator is not None:
+                print("Glevum pit elevator map detected")
                 sys.stdout.flush()
-                return 'sewers'
-        except (pag.ImageNotFoundException, Exception):
-            pass
-        
-        # Check for stairs
-        try:
-            loc_stairs = pag.locateOnWindow(
-                STAIRS_PATH, app, confidence=CONFIDENCE_MAP_DETECTION, grayscale=True
-            )
-            if loc_stairs is not None:
-                print("Stairs map detected")
-                sys.stdout.flush()
-                return 'stairs'
-        except (pag.ImageNotFoundException, Exception):
-            pass
-        
-        # Check for elevator
-        try:
-            loc_elevator = pag.locateOnWindow(
-                ELEVATOR_PATH, app, confidence=CONFIDENCE_MAP_DETECTION, grayscale=True
-            )
-            if loc_elevator is not None:
-                print("Elevator map detected")
-                sys.stdout.flush()
-                return 'elevator'
+                return 'glevum_pit_elevator'
         except (pag.ImageNotFoundException, Exception):
             pass
         
@@ -201,17 +173,9 @@ def press_keys_randomly(stop_event=None):
     if ENABLE_MAP_DETECTION:
         current_map = detect_current_map()
         
-        if current_map == 'sewers':
-            movement_array_to_use = MOVEMENT_ARRAY_SEWERS
-            print("Using sewers movement array")
-            sys.stdout.flush()
-        elif current_map == 'stairs':
-            movement_array_to_use = MOVEMENT_ARRAY_STAIRS
-            print("Using stairs movement array")
-            sys.stdout.flush()
-        elif current_map == 'elevator':
-            movement_array_to_use = MOVEMENT_ARRAY_ELEVATOR
-            print("Using elevator movement array")
+        if current_map == 'glevum_pit_elevator':
+            movement_array_to_use = MOVEMENT_ARRAY_GLEVUM_PIT_ELEVATOR
+            print("Using glevum pit elevator movement array")
             sys.stdout.flush()
         else:
             print("No map detected, using default movement array")
@@ -258,10 +222,19 @@ def press_keys_randomly(stop_event=None):
             except Exception as e:
                 print(f"Error with PyAutoGUI key press, using pynput fallback: {e}")
                 sys.stdout.flush()
-                # Fallback to pynput
-                _keyboard_controller.press(key)
-                time.sleep(random.uniform(MIN_KEY_HOLD_TIME, MAX_KEY_HOLD_TIME))
-                _keyboard_controller.release(key)
+                # Fallback to pynput - handle special keys like "space"
+                try:
+                    if key == "space":
+                        _keyboard_controller.press(Key.space)
+                        time.sleep(random.uniform(MIN_KEY_HOLD_TIME, MAX_KEY_HOLD_TIME))
+                        _keyboard_controller.release(Key.space)
+                    else:
+                        _keyboard_controller.press(key)
+                        time.sleep(random.uniform(MIN_KEY_HOLD_TIME, MAX_KEY_HOLD_TIME))
+                        _keyboard_controller.release(key)
+                except Exception as e2:
+                    print(f"Error with pynput fallback: {e2}")
+                    sys.stdout.flush()
             
             # Check stop event before delay to make it more responsive
             if stop_event and stop_event.is_set():

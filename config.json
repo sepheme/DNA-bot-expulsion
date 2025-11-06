@@ -10,13 +10,14 @@
     "movement_array": ["w", "a", "s", "d"],
     "movement_array_sewers": ["w", "s"],
     "movement_array_stairs": ["w", "a", "d"],
-    "movement_array_elevator": ["w"]
+    "movement_array_elevator": ["w"],
+    "movement_array_glevum_pit_elevator": ["w", "space"]
   },
   "features": {
     "enable_random_key_presses": true,
     "enable_notifications": true,
     "enable_window_detection": true,
-    "enable_map_detection": false
+    "enable_map_detection": true
   },
   "confidence": {
     "challenge_start": 0.9,
